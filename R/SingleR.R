@@ -7,19 +7,18 @@ library(Seurat)
 library(outliers)
 library(matrixStats)
 library(plyr)
+library(dplyr)
 library(made4)
 library(ggplot2)
-library(grid)
-library(gridExtra)
 require(statmod)
-library(foreach)
-library(doSNOW)
-library(parallel)
+library(pbmcapply)
+#library(doSNOW)
+#library(parallel)
 library(Matrix)
 library(GSEABase)
 library(GSVA)
 library(pheatmap)
-library(limma)
+#library(limma)
 
 # Colors
 qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
@@ -67,17 +66,10 @@ medianMatrix = function(mat,groups) {
 #' @return the top labels for each single cell
 SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tune.thres,genes,sd.thres,mean_mat) {
   n = dim(sc_data)[2]
-  numClusters = min(detectCores(all.tests = FALSE, logical = TRUE),16)
-  print(paste("Fine-tunning round on top cell types (using", numClusters, "CPU cores):"))
-  cl = makeCluster(numClusters)
-  registerDoSNOW(cl)
-  pb = txtProgressBar(max = n, style = 3)
-
-  progress = function(n) setTxtProgressBar(pb, n)
-  opts = list(progress = progress)
-
-  labels = foreach(i = 1:n, .combine = rbind, .options.snow = opts, .export=c("Matrix","rowSds")) %dopar% {
-    max_score = max(scores[i,])
+  numCores = min(detectCores(all.tests = FALSE, logical = TRUE),16)
+  print(paste("Fine-tunning round on top cell types (using", numCores, "CPU cores):"))
+  labels = pbmclapply(1:n,FUN=function(i){
+      max_score = max(scores[i,])
     topLabels = names(scores[i,scores[i,]>=max_score-fine.tune.thres])
     if (length(topLabels)==0) {
       return (names(which.max(scores[i,])))
@@ -114,10 +106,9 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tun
       }
       return (topLabels)
     }
-  }
-  close(pb)
-  stopCluster(cl)
-
+  },mc.cores=numCores)
+  labels = as.matrix(unlist(labels))
+  
   if (dim(sc_data)[2]>1) {
     rownames(labels)=t(colnames(sc_data))
   }
@@ -175,7 +166,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
 #' @param sd.thres if genes=='sd' then this is the threshold for defining a variable gene.
 #'
 #' @return a list with the labels and scores
-SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL, genes = "sd", quantile.use = 0.9, p.threshold = 0.05, fine.tune = TRUE, fine.tune.thres = 0.05,sd.thres=1) {
+SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL, genes = "de", quantile.use = 0.9, p.threshold = 0.05, fine.tune = TRUE, fine.tune.thres = 0.05,sd.thres=1) {
   rownames(ref_data) = tolower(rownames(ref_data))
   rownames(sc_data) = tolower(rownames(sc_data))
   A = intersect(rownames(ref_data),rownames(sc_data))
@@ -258,7 +249,8 @@ SingleR.DrawScatter = function(sc_data, cell_id, ref,sample_id) {
   ggplot(df,aes(x=x, y=y)) + geom_point(size=0.5,alpha=0.5,color='blue') +
     geom_smooth(method='lm',color='red')+
     theme(legend.position="none") + xlab('Single cell') + ylab('Reference sample') +
-    ggtitle(paste('R =', round(1000*cor(df$x,df$y,method='spearman'))/1000))
+    ggtitle(paste('R =', round(1000*cor(df$x,df$y,method='spearman'))/1000)) + 
+    theme_classic()
 }
 
 #' Plot boxplots for each lablel for a given single cell.
@@ -337,6 +329,8 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
 
   thres = sort(m,decreasing=TRUE)[min(top.n,length(m))]
 
+  data = as.matrix(SingleR$scores)
+  
   if (normalize==T) {
     mmax = rowMaxs(data)
     mmin = rowMins(data)
@@ -344,9 +338,9 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
   }
 
   if (SingleR$method == "cluster") {
-    data = as.matrix(SingleR$scores^3)
+    data = data^3
   } else if (SingleR$method == "single") {
-    data = as.matrix(SingleR$scores[labels,m>(thres-1e-6)]^3)
+    data = data[labels,m>(thres-1e-6)]^3
   }
   data = t(data)
   if (!is.null(clusters)) {
@@ -454,7 +448,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
   if (do.legend==FALSE) {
     p = p + theme(legend.position="none")
   }
-  p + theme_bw()
+  p = p + theme_classic()
   out = list(p=p,df=df,num.levels=num.levels)
 
 }
@@ -613,7 +607,11 @@ capitalize <- function(x) {
 SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='Human',citation='-',technology='-') {
 
   types = ref$types
-
+  if (do.main.types==T) {
+    print(paste0('Annotaing data with ',ref$name,' (Main types)...'))
+  } else {
+    print(paste0('Annotaing data with ',ref$name,'...'))
+  }
   SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres)
   SingleR.clusters = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres)
 
@@ -776,10 +774,10 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
 
   if (do.signatures==TRUE) {
     signatures = calculateSignatures(sc.data.gl,species=species)
-    singler = list(seurat = sc,singler = res)
+    singler = list(seurat = sc,singler = res,signatures = signatures)
 
   } else {
-    singler = list(seurat = sc,signatures = signatures,singler = res)
+    singler = list(seurat = sc,singler = res)
   }
 
 
