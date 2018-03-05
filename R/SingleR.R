@@ -1,24 +1,3 @@
-# install.packages(c('Seurat',devtools','dplyr','Matrix','rowr','RColorBrewer','outliers','matrixStats','plyr','made4','ggplot2','grid','gridExtra','statmod','foreach','doSNOW','parallel'))
-#source("https://bioconductor.org/biocLite.R")
-#biocLite(c('made4','GSEABase','GSVA','GEOquery'))
-
-library(RColorBrewer)
-library(Seurat)
-library(outliers)
-library(matrixStats)
-library(plyr)
-library(dplyr)
-library(made4)
-library(ggplot2)
-require(statmod)
-library(pbmcapply)
-#library(doSNOW)
-#library(parallel)
-library(Matrix)
-library(GSEABase)
-library(GSVA)
-library(pheatmap)
-#library(limma)
 
 # Colors
 qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
@@ -166,7 +145,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
 #' @param sd.thres if genes=='sd' then this is the threshold for defining a variable gene.
 #'
 #' @return a list with the labels and scores
-SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL, genes = "de", quantile.use = 0.9, p.threshold = 0.05, fine.tune = TRUE, fine.tune.thres = 0.05,sd.thres=1) {
+SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL, genes = "sd", quantile.use = 0.8, p.threshold = 0.05, fine.tune = TRUE, fine.tune.thres = 0.05,sd.thres=1) {
   rownames(ref_data) = tolower(rownames(ref_data))
   rownames(sc_data) = tolower(rownames(sc_data))
   A = intersect(rownames(ref_data),rownames(sc_data))
@@ -321,7 +300,8 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
 #' @param normalize if TRUE scores are normalized to a 0-1 scale.
 #' @param order.by.clusters if TRUE columns are ordered by the input clusters, and are not clustered again
 #' @param cells_order an input order for the column
-SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,normalize=T,order.by.clusters=F,cells_order=NULL) {
+#' @param silent if TRUE do not draw the plot  
+SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,normalize=T,order.by.clusters=F,cells_order=NULL,silent=F) {
   if (is.null(labels)) {
     labels = rownames(SingleR$scores)
   }
@@ -352,16 +332,16 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
   if (order.by.clusters==T) {
     data = data[,order(clusters$Clusters)]
     clusters = clusters[order(clusters$Clusters),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,cluster_cols = F)
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
   } else if (!is.null(cells_order)) {
     data = data[,order(cells_order)]
     clusters = clusters[order(cells_order),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,cluster_cols = F)
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
   } else {
     if (!is.null(clusters)) {
-      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters)
+      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,silent=silent)
     } else {
-      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6)
+      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,silent=silent)
 
     }
   }
@@ -418,29 +398,23 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
   }
 
   if (do.labels == TRUE) {
-    ctx <- ddply(df, .(ident), summarise, x = median(x))
-    cty <- ddply(df, .(ident), summarise, y = median(y))
-    centers = data.frame(ident = ctx$ident,x = ctx$x,y=cty$y)
+    df %>% dplyr::group_by(ident) %>% summarize(x = median(x), y = median(y)) -> centers
     p = p + geom_point(data = centers, aes(x=x, y=y), size=0, alpha=0) + geom_text(data=centers, aes(label=ident), size = label.size, fontface="bold")
     p = p + guides(colour=FALSE)
-    #x.range = ggplot_build(p)$panel$ranges[[1]]$x.range
     x.range = layer_scales(p)$x$range$range
     add_to_x = sum(abs(x.range))*0.03
     p = p + xlim(x.range[1]-add_to_x,x.range[2]+add_to_x)
-    #p = p + + xlim(-5000, 5000)
   } else {
-    #  n = 1
-    # if (num.levels>35) {
-    #   n = round(0.5+num.levels/35)
-    #   p = p + theme(legend.position="bottom",legend.direction="vertical",legend.text=element_text(size=8),legend.title = element_blank()) + guides(col=guide_legend(ncol=5))
-    # } else {
     if (is.null(font.size)) {
       font.size = 250*(1/num.levels)
       font.size = max(font.size,5)
       font.size = min(font.size,10)
     }
-    p = p + theme(legend.text=element_text(size=font.size),legend.title = element_blank())+ guides(col=guide_legend(ncol=1))
-    #  }
+    if (num.levels>35) {
+      p = p + theme(legend.position="bottom",legend.direction="vertical",legend.text=element_text(size=6),legend.title = element_blank()) + guides(col=guide_legend(ncol=5))
+    } else {
+      p = p + theme(legend.text=element_text(size=font.size),legend.title = element_blank())+ guides(col=guide_legend(ncol=1))
+    }
   }
   p = p + scale_color_manual(name="Type",values =colors)
   p = p + xlab("tSNE 1") + ylab("tSNE 2") + ggtitle(title)
@@ -448,7 +422,10 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
   if (do.legend==FALSE) {
     p = p + theme(legend.position="none")
   }
-  p = p + theme_classic()
+  p = p + theme(panel.grid.major = element_blank(), 
+                panel.grid.minor = element_blank(),
+                panel.background = element_blank(), 
+                axis.line = element_line(colour = "black"))
   out = list(p=p,df=df,num.levels=num.levels)
 
 }
@@ -499,7 +476,7 @@ clusters.map.values = function(seurat_clusters,singler_clusters) {
   seurat_clusters = as.matrix(seurat_clusters)
   singler_clusters = as.matrix(singler_clusters[sort.int(as.numeric(rownames(singler_clusters)),index.return=TRUE)$ix,])
   A = rownames(singler_clusters) %in% unique(seurat_clusters)
-  clusters = mapvalues(seurat_clusters, from = sort(as.numeric(unique(seurat_clusters))), to = paste0(rownames(singler_clusters)[A],": ",singler_clusters[A]))
+  clusters = plyr::mapvalues(seurat_clusters, from = sort(as.numeric(unique(seurat_clusters))), to = paste0(rownames(singler_clusters)[A],": ",singler_clusters[A]))
 }
 
 #' SingleR.Cluster - using the scores data to cluster single cells.
@@ -620,7 +597,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='H
 
   if (do.main.types==T) {
     types = ref$main_types
-    singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.9)
+    singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.8)
     singler$SingleR.clusters.main = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres, quantile.use = 0.9)
   }
 
@@ -788,7 +765,7 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
     A = intersect(rownames(sc.data.gl),rownames(cell.type.classification$cell.types.avg))
     r = cor(cell.type.classification$cell.types.avg[A,],as.matrix(sc.data.gl[A,]),method='spearman')
     other_annotation = max.col(t(r))
-    other_annotation=mapvalues(other_annotation,from=seq(1,ncol(cell.type.classification$cell.types.avg)),to=colnames(cell.type.classification$cell.types.avg))
+    other_annotation = plyr::mapvalues(other_annotation,from=seq(1,ncol(cell.type.classification$cell.types.avg)),to=colnames(cell.type.classification$cell.types.avg),warn_missing=F)
     names(other_annotation) = colnames(r)
     singler$other = other_annotation
   }
