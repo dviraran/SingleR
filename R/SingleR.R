@@ -410,8 +410,10 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
       font.size = max(font.size,5)
       font.size = min(font.size,10)
     }
-    if (num.levels>35) {
+    if (num.levels>35 & num.levels<60) {
       p = p + theme(legend.position="bottom",legend.direction="vertical",legend.text=element_text(size=6),legend.title = element_blank()) + guides(col=guide_legend(ncol=5))
+    } else if (num.levels>60){
+      p = p + theme(legend.position="bottom",legend.direction="vertical",legend.text=element_text(size=6),legend.title = element_blank()) + guides(col=guide_legend(ncol=9))
     } else {
       p = p + theme(legend.text=element_text(size=font.size),legend.title = element_blank())+ guides(col=guide_legend(ncol=1))
     }
