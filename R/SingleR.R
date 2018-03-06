@@ -48,7 +48,7 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tun
   numCores = min(detectCores(all.tests = FALSE, logical = TRUE),16)
   print(paste("Fine-tunning round on top cell types (using", numCores, "CPU cores):"))
   labels = pbmclapply(1:n,FUN=function(i){
-      max_score = max(scores[i,])
+    max_score = max(scores[i,])
     topLabels = names(scores[i,scores[i,]>=max_score-fine.tune.thres])
     if (length(topLabels)==0) {
       return (names(which.max(scores[i,])))
@@ -58,18 +58,22 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tun
         ref_data.filtered = as.matrix(ref_data[,labels.use])
         types.filtered = types[labels.use]
         mat = mean_mat[,topLabels]
-
-        if (genes[1] == "de") {
+        if (typeof(genes)=='list') {
+          n = round(1000*(2/3)^(log2(c(ncol(mat)))))
+          utypes = colnames(mat)
+          genes.filtered = unique(unlist(unlist(lapply(utypes,function(j) lapply(utypes, function(i) genes[[i]][[j]][1:n])))))
+          genes.filtered=intersect(tolower(genes.filtered),rownames(mat))
+        } else if (genes[1] == "de") {
           n = round(500*(2/3)^(log2(c(ncol(mat)))))
           genes.filtered = unique(unlist(unlist(lapply(1:ncol(mat), function(j) {lapply(1:ncol(mat), function(i) {s=sort(mat[,j]-mat[,i],decreasing=T);s=s[s>0];names(s)[1:min(n,length(s))]})}))))[-1]
         } else if (genes[1] == "sd") {
           sd =  rowSds(mat)
           thres = min(sort(sd,decreasing = TRUE)[500],sd.thres)
-          genes.filtered=intersect(rownames(ref_data)[sd>=thres],rownames(sc_data))
+          genes.filtered = intersect(rownames(ref_data)[sd>=thres],rownames(sc_data))
         } else {
           genes.filtered=intersect(genes,intersect(rownames(sc_data),(rownames(ref_data))))
         }
-
+        
         ref_data.filtered = ref_data.filtered[genes.filtered,]
         sc_data.filtered = as.matrix(sc_data[genes.filtered,])
         data = sc_data.filtered[,i]
@@ -92,7 +96,7 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tun
     rownames(labels)=t(colnames(sc_data))
   }
   return(labels)
-
+  
 }
 
 #' Scoring single cells using reference data set
@@ -108,23 +112,23 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
   sc_data = as.matrix(sc_data[genes,])
   ref_data = as.matrix(ref_data[genes,])
   r=cor(sc_data,ref_data,method='spearman')
-
+  
   agg_scores = aggregate(t(r)~types,FUN = quantile, probs  = quantile.use)
   labels = agg_scores[max.col(t(agg_scores[,-1])),1]
   output = list()
-
-
+  
+  
   if (dim(sc_data)[2]>1) {
     names(labels)=t(colnames(sc_data))
   }
-
+  
   output$scores = as.matrix(agg_scores[,-1])
   rownames(output$scores) = agg_scores[,1]
-
+  
   output$labels = as.matrix(labels)
   output$r = r
   output$scores = t(output$scores)
-
+  
   return(output)
 }
 
@@ -157,7 +161,13 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
     sc_data = sc_data[!not.use,]
   }
   mat = medianMatrix(ref_data,types)
-  if (genes[1] == "de") {
+  if (typeof(genes)=='list') {
+    utypes = unique(types)
+    n = round(1000*(2/3)^(log2(c(ncol(mat)))))
+    genes.filtered = unique(unlist(unlist(lapply(utypes,function(j) lapply(utypes, function(i) genes[[i]][[j]][1:n])))))
+    genes.filtered = intersect(tolower(genes.filtered),rownames(mat))
+    print(paste0("Number of DE genes:", length(genes.filtered)))
+  } else if (genes[1] == "de") {
     n = round(500*(2/3)^(log2(c(ncol(mat)))))
     genes.filtered = unique(unlist(unlist(lapply(1:ncol(mat), function(j) {lapply(1:ncol(mat), function(i) {s=sort(mat[,j]-mat[,i],decreasing=T);s=s[s>0];names(s)[1:min(n,length(s))]})}))))[-1]
     print(paste0("Number of DE genes:", length(genes.filtered)))
@@ -169,9 +179,9 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
     print(paste("Number of genes using in analysis:",length(genes.filtered)))
     genes.filtered=intersect(genes,intersect(rownames(sc_data),(rownames(ref_data))))
   }
-
+  
   cell.names = colnames(sc_data)
-
+  
   if (method == "single") {
     print(paste("Number of cells:",dim(sc_data)[2]))
   } else if (method == "cluster") {
@@ -190,10 +200,10 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
   }
   output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use)
   output$pval = apply(output$scores, 1,function(x) chisq.out.test(x)$p.value)
-
+  
   # second round with top labels
   if (fine.tune==TRUE & length(unique(types)) > 2) {
-    labels = SingleR.FineTune(sc_data,ref_data,types,output$scores,quantile.use,fine.tune.thres,genes = genes[1],sd.thres,mat)
+    labels = SingleR.FineTune(sc_data,ref_data,types,output$scores,quantile.use,fine.tune.thres,genes = genes,sd.thres,mat)
     output$labels1 = as.matrix(output$labels)
     output$labels = as.matrix(labels)
     output$labels1.thres = c(output$labels)
@@ -207,7 +217,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
   output$quantile.use = quantile.use
   output$types = types
   output$method = method
-
+  
   return (output)
 }
 
@@ -250,21 +260,21 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
   main_colors = singler.colors[levels(factor(ref$main_types))]
   sub_colors = singler.colors[unique(cbind(ref$main_types,ref$types))[,1]]
   names(sub_colors) = unique(cbind(ref$main_types,ref$types))[,2]
-
+  
   if (main_types==T) {
     types = ref$main_types
     sub_colors = main_colors
   } else {
     types = ref$types
   }
-
+  
   if (!is.null(labels.use)) {
     types.use = types %in% labels.use
     types = types[types.use]
   } else {
     types.use = rep(TRUE,length(types))
   }
-
+  
   res = SingleR(sc_data=as.matrix(sc_data[,c(cell_id,cell_id)]),ref_data=ref$data[,types.use],types=types,fine.tune=F,sd.thre=ref$sd.thres)
   if (is.null(top.n)) {
     top.n = length(unique(types))
@@ -273,12 +283,12 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
   df = data.frame(Spearman=res$r[1,A],Types=types[A])
   fac <- with(df, reorder(Types, Spearman, function(x) quantile(x, probs  = quantile.order), order = TRUE))
   df$Types <- factor(df$Types, levels = levels(fac))
-
+  
   p = ggplot(df, aes(x = Types, y = Spearman,  color = Types)) +
     geom_point(alpha = 0.5, position = "jitter",shape=16) +
     geom_boxplot(alpha = 0, colour = "black")+theme_classic() +
     xlab('') + ggtitle(paste(colnames(sc_data)[cell_id])) +
-
+    
     theme(legend.position="none"
           , axis.text.x = element_text(angle = 45, hjust = 1),plot.title = element_text(hjust = 0.5)
           , panel.background = element_rect(fill = "transparent") # bg of the panel
@@ -286,9 +296,9 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
           , legend.background = element_rect(fill = "transparent") # get rid of legend bg
           , legend.box.background = element_rect(fill = "transparent") # get rid of legend panel bg
     )
-
+  
   list(plot=p,res=res)
-
+  
 }
 
 #' Plot a heatmap of the scores for all the single cells
@@ -306,9 +316,9 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
     labels = rownames(SingleR$scores)
   }
   m = apply(SingleR$scores[labels,],2,max)
-
+  
   thres = sort(m,decreasing=TRUE)[min(top.n,length(m))]
-
+  
   data = as.matrix(SingleR$scores)
   
   if (normalize==T) {
@@ -316,18 +326,19 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
     mmin = rowMins(data)
     data = (data-mmin)/(mmax-mmin)
   }
-
+  
   if (SingleR$method == "cluster") {
     data = data^3
   } else if (SingleR$method == "single") {
     data = data[labels,m>(thres-1e-6)]^3
   }
   data = t(data)
+
   if (!is.null(clusters)) {
     clusters = as.data.frame(clusters)
     colnames(clusters) = 'Clusters'
     rownames(clusters) = colnames(data)
-
+    
   }
   if (order.by.clusters==T) {
     data = data[,order(clusters$Clusters)]
@@ -342,7 +353,7 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
       pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,silent=silent)
     } else {
       pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,silent=silent)
-
+      
     }
   }
 }
@@ -367,7 +378,7 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
 SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL, do.letters = TRUE, dot.size = 1, do.labels = FALSE, do.legend = TRUE, label.size=3, title = "",colors=singler.colors,font.size=NULL,alpha=0.5) {
   if (do.labels == TRUE)
     do.letters = FALSE
-
+  
   df = data.frame(row.names = SingleR$cell.names)
   df$x = xy[,1]
   df$y = xy[,2]
@@ -382,21 +393,21 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
     lev = levels(df$ident)
     df$ident = factor(df$ident,levels = c(lev[-which(lev %in% 'Other')],'Other'))
   }
-
+  
   num.levels = length(levels(df$ident))
   if (num.levels<0)
     colors = getcol(c(1:length(unique(labels))))
-
+  
   p = ggplot(df, aes(x = x, y = y))
-
+  
   p = p + geom_point(aes(color=ident), size=dot.size,alpha=alpha)
-
+  
   if( do.letters == TRUE) {
     p = p + geom_point(aes(shape=as.character(ident)), size=dot.size/2)
     p = p + scale_shape_identity()
   } else {
   }
-
+  
   if (do.labels == TRUE) {
     df %>% dplyr::group_by(ident) %>% summarize(x = median(x), y = median(y)) -> centers
     p = p + geom_point(data = centers, aes(x=x, y=y), size=0, alpha=0) + geom_text(data=centers, aes(label=ident), size = label.size, fontface="bold")
@@ -420,7 +431,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
   }
   p = p + scale_color_manual(name="Type",values =colors)
   p = p + xlab("tSNE 1") + ylab("tSNE 2") + ggtitle(title)
-
+  
   if (do.legend==FALSE) {
     p = p + theme(legend.position="none")
   }
@@ -429,7 +440,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
                 panel.background = element_blank(), 
                 axis.line = element_line(colour = "black"))
   out = list(p=p,df=df,num.levels=num.levels)
-
+  
 }
 
 #' Calculate single-sample gene set enrichment (ssGSEA) for each single cell
@@ -450,14 +461,14 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL) {
   } else {
     egc = signatures
   }
-
+  
   sc_data = as.matrix(sc_data)
   rownames(sc_data) = tolower(rownames(sc_data))
   numClusters = min(detectCores(all.tests = FALSE, logical = TRUE),16)
-  scores = gsva(sc_data,egc,method='ssgsea',parallel.sz=numClusters)
+  scores = gsva(sc_data,egc,method='ssgsea',parallel.sz=numClusters,parallel.type='FORK')
   #rownames(scores) = c('G1/S','G2/M')
   output = data.frame(t(scores))
-
+  
   if (is.null(signatures) && species=="Human") {
     output$Cell_Cycle = rowMeans(t(scores[c('G1S','G2M'),]))
     output[,c('G1S','G2M')] = c()
@@ -508,12 +519,18 @@ SingleR.Subset = function(singler,subsetdata) {
   singler$seurat@meta.data = subset(singler$seurat@meta.data,subsetdata)
   singler$seurat@ident = singler$seurat@ident[subsetdata]
   singler$seurat@cell.names = singler$seurat@cell.names[subsetdata]
-
+  
   for (i in 1:length(singler$singler)) {
     singler$singler[[i]]$SingleR.single$cell.names = singler$singler[[i]]$SingleR.single$cell.names[subsetdata]
     singler$singler[[i]]$SingleR.clusters$cell.names = singler$singler[[i]]$SingleR.clusters$cell.names[subsetdata]
     singler$singler[[i]]$SingleR.single$scores = singler$singler[[i]]$SingleR.single$scores[subsetdata,]
     singler$singler[[i]]$SingleR.single$labels = as.matrix(singler$singler[[i]]$SingleR.single$labels[subsetdata,])
+    if(!is.null(singler$singler[[i]]$SingleR.single.main)) {
+      singler$singler[[i]]$SingleR.single.main$cell.names = singler$singler[[i]]$SingleR.single.main$cell.names[subsetdata]
+      singler$singler[[i]]$SingleR.clusters.main$cell.names = singler$singler[[i]]$SingleR.clusters.main$cell.names[subsetdata]
+      singler$singler[[i]]$SingleR.single.main$scores = singler$singler[[i]]$SingleR.single.main$scores[subsetdata,]
+      singler$singler[[i]]$SingleR.single.main$labels = as.matrix(singler$singler[[i]]$SingleR.single.main$labels[subsetdata,])
+    }
   }
   if (!is.null(singler[["signatures"]])) {
     singler$signatures = singler$signatures[subsetdata,]
@@ -555,7 +572,7 @@ TPM = function(counts,lengths=NULL) {
   }
   rownames(counts) = tolower(rownames(counts))
   names(lengths) = tolower(names(lengths))
-
+  
   A = intersect(rownames(counts),names(lengths))
   counts = counts[A,]
   lengths = lengths[A]
@@ -567,6 +584,24 @@ capitalize <- function(x) {
   s <- strsplit(x, " ")[[1]]
   paste(toupper(substring(s, 1,1)), substring(s, 2),
         sep="", collapse=" ")
+}
+
+#' Create a list for differential genes for all pairwise cell types in the a reference data set.
+#' Using this significantly reduces computation time for the 'de' variable gene method.
+#'
+#' @param ref_data the reference dataset gene expression matrix
+#' @param types labels for each column in ref_data
+#' @param n number of genes per pairwise comparison
+#'
+#' @return list of lists. Each list contains a list for each cell types with n differential genes.
+CreateVariableGeneSet = function(ref_data,types,n) {
+  mat = medianMatrix(ref_data,types)
+  genes = lapply(1:ncol(mat), function(j) {lapply(1:ncol(mat), function(i) {s=sort(mat[,j]-mat[,i],decreasing=T);s=s[s>0];names(s)[1:min(n,length(s))]})})
+  names(genes) = colnames(mat)
+  for (i in 1:length(genes)) {
+    names(genes[[i]]) = colnames(mat)
+  }
+  genes
 }
 
 #' Wrapper function to create a SingleR object
@@ -583,26 +618,40 @@ capitalize <- function(x) {
 #' @export
 #'
 #' @examples
-SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='Human',citation='-',technology='-') {
-
+SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='Human',citation='-',technology='-',variable.genes='sd') {
+  
   types = ref$types
-  if (do.main.types==T) {
-    print(paste0('Annotaing data with ',ref$name,' (Main types)...'))
+
+  print(paste0('Annotating data with ',ref$name,'...'))
+
+  
+  print(paste('Variable genes method:',variable.genes))
+  
+  if (variable.genes=='de') {
+      if (!is.null(ref$de.genes)) {
+        variable.genes = ref$de.genes
+        variable.genes.main = ref$de.genes.main
+      } else {
+        variable.genes = CreateVariableGeneSet(ref$data,ref$types,200)
+        variable.genes.main = CreateVariableGeneSet(ref$data,ref$main_types,300)
+      }
   } else {
-    print(paste0('Annotaing data with ',ref$name,'...'))
+    variable.genes.main = variable.genes
   }
-  SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres)
-  SingleR.clusters = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres)
-
-  about = list(Organism = capitalize(species),Citation=citation,Technology=technology,RefData=ref$name)
+  
+  SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres,genes = variable.genes)
+  SingleR.clusters = SingleR("cluster",sc.data,ref$data,types=types, clusters = factor(clusters),sd.thres = ref$sd.thres,genes = variable.genes)
+  
+  about = list(Organism = capitalize(species),Citation=citation,Technology = technology,RefData=ref$name)
   singler = list(SingleR.single = SingleR.single, SingleR.clusters = SingleR.clusters,about=about)
-
+  
   if (do.main.types==T) {
+    print(paste0('Annotating data with ',ref$name,' (Main types)...'))
     types = ref$main_types
-    singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.8)
-    singler$SingleR.clusters.main = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres, quantile.use = 0.9)
+    singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.8, genes = variable.genes.main)
+    singler$SingleR.clusters.main = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres, quantile.use = 0.8,genes = variable.genes.main)
   }
-
+  
   if (!(ref$name %in% c('Immgen','RNAseq','HPCA','Blueprint_Encode','Fantom','GSE43005'))) {
     singler$about$refernce = ref
   }
@@ -629,7 +678,7 @@ SingleR.CreateSeurat <- function(project,sc.data,min.genes = 500,min.cells = 2,r
   sc = CreateSeuratObject(raw.data = sc.data, min.cells = min.cells, min.genes = min.genes, project = project)
   if (species == 'Human') {
     mtgenes = '^MT-'
-
+    
   } else {
     mtgenes = '^Mt-'
   }
@@ -637,23 +686,23 @@ SingleR.CreateSeurat <- function(project,sc.data,min.genes = 500,min.cells = 2,r
   percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
   sc <- AddMetaData(object = sc, metadata = percent.mito, col.name = "percent.mito")
   #sc <- FilterCells(object = sc, subset.names = c("nGene", "percent.mito"), low.thresholds = c(200, -Inf), high.thresholds = c(2500, 0.05))
-
+  
   sc <- NormalizeData(object = sc, normalization.method = "LogNormalize", scale.factor = 10000)
   sc <- FindVariableGenes(object = sc, mean.function = ExpMean, dispersion.function = LogVMR, x.low.cutoff = 0.0125, x.high.cutoff = 3, y.cutoff = 0.5, do.contour = F, do.plot = F)
-
+  
   sc <- ScaleData(object = sc, vars.to.regress = regress.out)
-
+  
   sc <- RunPCA(object = sc, pc.genes = sc@var.genes, do.print = FALSE)
-
+  
   sc <- FindClusters(object = sc, reduction.type = "pca", dims.use = 1:npca,resolution = resolution, print.output = 0, save.SNN = F, temp.file.location = temp.dir)
-
+  
   if (ncol(sc@data)<100) {
     sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T,perplexity=10  )
   } else {
     sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T)
-
+    
   }
-
+  
   sc
 }
 
@@ -679,22 +728,22 @@ SingleR.CreateSeurat <- function(project,sc.data,min.genes = 500,min.cells = 2,r
 #' @export
 #'
 #' @examples
-SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500,min.cells=2,regress.out='nUMI',npca=10,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,temp.dir=NULL) {
+SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500,min.cells=2,regress.out='nUMI',npca=10,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',temp.dir=NULL) {
   if (typeof(counts) == 'character') {
     counts <- as.matrix(read.table(counts, header=TRUE, sep="\t", row.names=1, as.is=TRUE,comment.char='!'))
   }
   print(dim(counts))
-
+  
   A = tolower(rownames(counts))
   dupA = duplicated(A)
   if (sum(dupA)>0) {
     counts = counts[!dupA,]
   }
-
+  
   if (species=='Mouse') {
     rownames(counts) = paste(toupper(substr(rownames(counts), 1, 1)), tolower(substr(rownames(counts), 2, nchar(rownames(counts)))), sep="")
   }
-
+  
   if (!is.null(annot)) {
     if (length(annot) == 1) {
       types <- read.table(annot, header=TRUE, sep="\t", row.names=1, as.is=TRUE)
@@ -707,13 +756,13 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
     orig.ident = rep('NA',ncol(counts))
     names(orig.ident)=colnames(counts)
   }
-
+  
   print(project.name)
   sc = SingleR.CreateSeurat(project.name,counts,min.genes=min.genes,min.cells=min.cells,regress.out=regress.out,npca=npca,species=species,temp.dir=temp.dir)
-
+  
   orig.ident = orig.ident[colnames(sc@data)]
   sc.data = counts[,colnames(sc@data)]
-
+  
   if (normalize.gene.length == F) {
     sc.data.gl = sc.data
     rownames(sc.data.gl) = tolower(rownames(sc.data.gl))
@@ -724,42 +773,42 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
       sc.data.gl = TPM(sc.data,mouse_lengths)
     }
   }
-
+  
   clusters = sc@ident
-
+  
   if (length(ref.list)==0) {
     if (species == 'Mouse') {
       if (!exists('immgen'))
         data('Immgen')
       if (!exists('mouse.rnaseq'))
         data('Mouse-RNAseq')
-      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T),
-                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T)
+      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes),
+                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
       )
     } else if (species == 'Human') {
       if(!exists('hpca'))
         data ('HPCA')
       if (!exists('blueprint_encode'))
         data('Blueprint_Encode')
-      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T),
-                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T))
+      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes),
+                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes))
     }
   } else {
     res = lapply(ref.list, FUN=function(x) {
-      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T)
+      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
     })
   }
   sc@meta.data$orig.ident = factor(orig.ident)
-
+  
   if (do.signatures==TRUE) {
     signatures = calculateSignatures(sc.data.gl,species=species)
     singler = list(seurat = sc,singler = res,signatures = signatures)
-
+    
   } else {
     singler = list(seurat = sc,singler = res)
   }
-
-
+  
+  
   if (species == 'Human') {
     if (!exists('cell.type.classification'))
       data('cell.type.cor.classification')
@@ -771,17 +820,17 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
     names(other_annotation) = colnames(r)
     singler$other = other_annotation
   }
-
+  
   if(reduce.file.size==T) {
     singler$seurat@raw.data = c()
     singler$seurat@scale.data = c()
     singler$seurat@calc.params = list()
   }
-
+  
   singler = remove.Unnecessary.Data.single(singler)
-
+  
   singler
-
+  
 }
 
 

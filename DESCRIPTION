@@ -20,4 +20,5 @@ Imports: RColorBrewer,
     Matrix,
     GSEABase,
     GSVA,
-    pheatmap
+    pheatmap,
+    parallel
