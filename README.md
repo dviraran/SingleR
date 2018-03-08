@@ -12,7 +12,7 @@ devtools::install_github('dviraran/SingleR')
 
 library(SingleR)
 
-See [SingleR specifications](https://github.com/dviraran/SingleR/blob/master/vignettes/SingleR_specifications.html) for examples of usage.
+See [SingleR specifications](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR_specifications.html) for examples of usage.
 
 # Contributors
 
