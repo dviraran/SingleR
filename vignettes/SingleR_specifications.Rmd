@@ -1,0 +1,343 @@
+---
+title: "SingleR 1.0 - Method overview and examples"
+output: 
+  html_document:
+    code_folding: hide
+bibliography: Citations.bib
+
+---
+
+```{r setup, include=FALSE,warning=F}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(reshape2)
+library(ggplot2)
+library(pheatmap)
+library(SingleR)
+```
+
+## Introduction
+
+Recent advances in single cell RNA-seq (scRNA-seq) have enabled an unprecedented level of granularity in characterizing gene expression changes in disease models. Multiple single cell analysis methodologies have been developed to detect gene expression changes and to cluster cells by similarity of gene expression. However, the classification of clusters by cell type relies heavily on known marker genes, and the annotation of clusters is performed manually. This strategy suffers from subjectivity and limits adequate differentiation of closely related cell subsets. Here, we present SingleR, a novel computational method for unbiased cell type recognition of scRNA-seq. SingleR leverages reference transcriptomic datasets of pure cell types to infer the cell of origin of each of the single cells independently. SingleR’s annotations combined with Seurat, a processing and analysis package designed for scRNA-seq, provide a powerful tool for the investigation of scRNA-seq data. We developed an R package to generate annotated scRNA-seq objects that can then use the SingleR web tool for visualization and further analysis of the data – <http://comphealth.ucsf.edu/SingleR>.
+
+Here we explain in details the SingleR pipeline and present examples of applying SingleR on publicly available mouse and human scRNA-seq datasets.
+
+## SingleR specifications
+
+**Reference set:** A comprehensive transcriptomic dataset (microarray or RNA-seq) of pure cell types, preferably with multiple samples per cell type. 
+
+* **Mouse:** We processed and annotated two reference mouse datasets:
+
+    + Immunological Genome Project (ImmGen): a collection of 830 microarray samples, which we classified to classified to 20 main cell types and further annotated to 253 subtypes. 
+    
+    + A dataset of 358 mouse RNA-seq samples annotated to 28 cell types. This dataset was collected, processed and shared, courtesy of [Bérénice Benayoun](http://gero.usc.edu/faculty/berenice-benayoun-phd/).
+
+* **Human** For human datasets we use the following reference datasets: 
+
+    + Human Primary Cell Atlas (HPCA): a collection of Gene Expression Omnibus (GEO) datasets), which contains 713 microarray samples classified to 38 main cell types and further annotated to 169 subtypes. 
+
+    + Blueprint+Encode: Blueprint Epigenomics, 144 RNA-seq pure immune samples annotated to 28 cell types. Encode:  115 RNA-seq pure stroma and immune samples annotated 17 cell types. Altogether, 259 samples with to 43 cell types.
+  
+* For specific applications, smaller datasets can be applicable (see the main paper for the macrophages example). 
+
+**Single-cell set:** Single-cell RNA-seq dataset. It is a good practice to filter-out cells with non-sufficient genes identified and genes with non-sufficient expression across cells. In all examples below we filtered-out cells containing less than 500 genes, and genes which were found in at least one sample. However, we did not observe a significant decrease in performance when considering less stringent threshold on the number of genes per cell. 
+
+**Annotation:** SingleR runs in two modes: (1) Single-cell: the annotation is perforemd for each single-cell independently. (2) Cluster: the annotation is perforemd on predefined clusters, where the expression of a cluster is the sum expression of all cells in the cluster. In addition, SingleR annotates cells/clusters to all cell types, or combines cell types to major cell types.
+
+*	Step 1: Spearman coefficient is calculated for single-cell expression with each of the samples in the reference dataset. The correlation analysis is performed only on variable genes in the reference dataset. In all examples below we chose variable genes using a cutoff on the standard deviation; however other methods can be applied. 
+
+```{r message=FALSE,warning=FALSE}
+load ('~/Documents/SingleR/SingleR/data/GSE74923.RData')
+load ('~/Documents/SingleR/SingleR/data/references/Immgen.RData')
+SingleR.DrawScatter(singler$seurat@data,10,immgen,232)
+```
+
+    + Variable genes: SingleR supports to modes for choosing the variable genes in the reference dataset. 'sd' - genes with a standard deviation across all samples in the reference dataset over a threshold. We choose thresholds such that we start with 3000-4000 genes. 'de' - top N genes that have a median expression in a cell type compared to each other cell type. We use a varying N, depending on the number of cell types used in the analysis. More details can be found in the SingleR code.
+
+*	Step 2: Multiple correlation coefficients per cell types are aggregated to provide a single value per cell type per single-cell. In the examples below we use the 80% percentile of correlation values. Cell types with the high values are then passed to the fine-tuning step (Step 3). In the examples below, top cell types are chosen such that they have less than 0.05 difference from the highest value.
+
+```{r message=FALSE,warning=FALSE}
+out = SingleR.DrawBoxPlot(singler$seurat@data,10,ref=immgen,main_types = T,
+labels.use=c('B cells','T cells','DC','Macrophages','Monocytes','NK cells',
+             'Mast cells','Neutrophils','Fibroblasts','Endothelial cells'))
+print(out$plot)
+```
+
+*	Step 3: In this step SingleR reruns the correlation analysis, but only for the top cell types from step 2. The analysis is performed only on **variable genes between these cell types**. The lowest value cell type is removed (or a margin of more than 0.05 from top value), and then this step is repeated until only two cell types remain. The cell type corresponding to top value after the last run is assigned to the single-cell.
+
+The open source code is available in the SingleR Github repository.
+
+## Running SingleR
+
+We provide a wrapper function (*SingleR.CreateFromCounts*) which creates a singler object which contains a Seurat object and singler annotations with multiple references. Click on 'code' to see an example.
+
+```{r eval=FALSE,echo=TRUE}
+res = SingleR.CreateFromCounts(counts='GSE74923_series_matrix.txt',
+       annot='GSE74923_types.txt',project.name='GSE74923',min.genes=500,
+       min.cells=2,regress.out='nUMI',technology='C1',species='Mouse',
+       citation='Kimmerling et al. 2016',reduce.file.size = T, 
+       normalize.gene.length = T,working.dir=NULL)
+```
+
+After reading the files with the counts and the annotations, this function creates a Seurat object using the wrapper function *SingleR.CreateSeurat*. Next, if the scRNA-seq data is full-length the counts are normalized to gene length (TPM). Then, the *SingleR.CreateObject* is called for each reference data set. Finally, *calculateSignatures* is called to create a reference datasets.
+
+The resulting object is a list with the following fields:
+
+* seurat - the seurat object. Using the reduce.file.size switch will remove the raw data from the object.
+
+* singler - another list, with data for the singler annotations with each reference dataset. Each element in the list is a list containing the following fields:
+    + SingleR.single - a list for the results by single cells for all cell types.
+    + SingleR.single.main - a list for the results by single cellsonly for main cell types.
+    + SingleR.cluster - a list for the results by clusters for all cell types.
+    + SingleR.cluster.main - a list for the results by clusters only for main cell types.
+
+* Each of those elements contains the following fields:
+    + scores - a matrix of the aggregated scores. Row for each single cell (or cluster), column for each cell type.
+    + labels - the fine-tuned annotated labels.
+    + labels1 - the annotated lables, without fine-tuning (after one round).
+  
+  
+## Benchmarking SingleR
+
+In the examples below we use the Seurat package to process the scRNA-seq data and perform the t-SNE analysis. All visualizations are readily available through the SingleR web tool – <http://comphealth.ucsf.edu/SingleR>. The web app allows to view the data and interactively analyze it. 
+
+### Example 1: GSE74923 – Kimmerling et al. Nature Communications [-@Kimmerling2016]
+
+A dataset that was created to test the C1 platform. 194 single-cell mouse cell lines were analyzed using C1: 86 L1210 cells, mouse lymphocytic leukemia cells, and 108 mouse CD8+ T-cells. 
+
+First, we look at the t-SNE plot colored by the original identites:
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,
+      singler$seurat@dr$tsne@cell.embeddings,do.label=FALSE,do.letters=F,
+      labels=singler$seurat@meta.data$orig.ident,label.size = 4, 
+      dot.size = 2)
+out$p
+```
+
+We can then observe the classification by a heatmap of the aggregated scores. These scores are before fine-tuning. We can view this heatmap by the main cell types:
+
+```{r}
+SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single.main,top.n=Inf,
+                    clusters = singler$seurat@meta.data$orig.ident)
+```
+
+or by all cell types (showing the top 50 cell types):
+
+```{r}
+SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single,top.n=50,
+                    clusters = singler$seurat@meta.data$orig.ident)
+```
+
+We can see that the L1210 cells were classified strongly to 3 types of B-cells progenitors. We can see that the CD8 cells were mostly correlated with a specific activation of effector CD8+ T-cells. Interestingly, there is one cell that seems to be correlated with both pro B-cells and CD8+ T-cells, suggesting that this a doublet.
+
+Another interesting application of this heatmap is the ability to cluster the cells, not by their gene expression profile, but by their similarity to all cell types in the database. We use this clustering technique in the manuscript (Figure 2b).
+
+Note: this view maybe misleading, since each column is normalized to a score between 0 and 1 (which also depends on the cell types included in the view). Thus, a single cell may have low correlations with multiple cell types, and none of them are the accurate cell type, but in the heatmap they will all be red. Without normalization the data looks like this:
+
+```{r}
+SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single,top.n=50,
+        normalize=F,clusters = singler$seurat@meta.data$orig.ident)
+```
+
+Next, we can use the fine-tuned labels to color the t-SNE plot:
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,
+        singler$seurat@dr$tsne@cell.embeddings,do.label=FALSE,
+        do.letters =F,labels=singler$singler[[1]]$SingleR.single$labels,
+        label.size = 4, dot.size = 2)
+out$p
+```
+
+We can see that SingleR correctly annotated all the L1210 as types of B-cells, almost exclusively as B-cells progenitors. On the other hand, all CD8 cells were correctly annotated to CD8+ T-cells. It is important to remember that there are 253 types that SingleR could have chosen from, but correctly chose the most relevant cell types. Interestingly, the tSNE plot incorrectly positioned cells in the wrong cluster, but SingleR was not affected by this.
+
+Finally, we can also view the labelings as a table compared to the original identities:
+```{r}
+kable(table(singler$singler[[1]]$SingleR.single$labels,singler$seurat@meta.data$orig.ident))
+```
+
+### Example 2: GSE48968 – Shalek et al. Nature [-@Shalek2014]
+
+In the main manuscript we described our analysis to a dataset produced by @Hashimshony2016, which contains scRNA-seq of fibroblasts and bone-marrow derived dendritic cells (BMDCs). We showed that 32 of those 48 cells were actually macrophages, in accordance with a @Helft2015. Here we reanalyzed a seminal study in scRNA-seq, which performed one of the earliest big scale analysis of single-cells. Using the Smart-Seq protocol the authors analyzed 1775 single mouse BMDCs. The paper described in details different dendritic cells (DCs) activation states that have been observed in the data, without any mention of macrophages.
+
+Running Seurat with the same filters as described above produced the following t-SNE plot:
+
+```{r}
+load ('~/Documents/SingleR/SingleR/data/GSE48968.RData')
+out = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,
+        singler$seurat@dr$tsne@cell.embeddings,do.label=FALSE,
+        do.letters =T,labels=singler$seurat@meta.data$orig.ident, 
+        dot.size = 2)
+out$p
+```
+
+And the SingleR annotations:
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,
+        singler$seurat@dr$tsne@cell.embeddings,do.label=FALSE,
+        do.letters =T, 
+        dot.size = 2)
+out$p
+```
+
+To make it simpler to view, we present only main cell types:
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single.main,
+        singler$seurat@dr$tsne@cell.embeddings,do.label=FALSE,
+        do.letters =T, 
+        dot.size = 2)
+out$p
+```
+
+SingleR mapped all the left side to macrophages, top top right to monocytes, and only the bottom right to dendritic cells. 
+
+In a table:
+
+```{r}
+kable(table(singler$seurat@meta.data$orig.ident,singler$singler[[1]]$SingleR.single.main$labels))
+```
+
+As in the main manuscript, we employed the dataset produced by Helft et al. [-@Helft2015] (downloaded from GEO accession: GSE62361), which analyzed by microarray the expression profiles of GM-DCs and GM-Macs. We select the top 50 diffentrially expressed genes of each cell type, and present a heatmap of their expression in the single cells:
+
+```{r}
+gse62631.de <- read.table('~/Documents/singler/GSE62361_DE.txt', 
+                          header=TRUE, sep="\t", row.names=1, as.is=TRUE)
+bmdc.genes = gse62631.de[intersect(rownames(gse62631.de),
+                                   rownames(singler$seurat@data)),'Group',drop=F]
+d = t(scale(t(as.matrix(singler$seurat@data[rownames(bmdc.genes),]))))
+d[d>2]=2;d[d< -2]=-2
+annotation_col = data.frame(Annotation=singler$singler[[1]]$SingleR.single.main$labels)
+pheatmap(d[order(bmdc.genes$Group),
+         order(singler$singler[[1]]$SingleR.single.main$labels)],
+         cluster_cols = F,cluster_rows = F,clustering_method='ward.D',
+         border_color = NA,
+         annotation_col=annotation_col,
+         annotation_row = bmdc.genes,show_colnames=F,show_rownames=F)
+```
+
+We can see that SingleR correctly identified the DCs and the macrophages populations. Interstingly, the cells annotated as monocytes seem to contain markers of both GM-Macs and GM-DCs, suggesting that those are earlier progenitors, which have not yet committed to the DC or Macrophage lineage.
+
+In accordance with Helft et al. this analysis urges the reevaluation of studies to characterize DCs based on BMDC. It also emphasize how using SingleR can assist in resolving the cellular heterogeneity.
+
+### Example 3: 10X datasets – Zheng et al. Nature Communications [-@Zheng2017]
+
+We also applied SingleR to human datasets. Using the 10X platform, Zheng et al. produced >100K single cells from sorted immune and cell lines populations. We obtained this data from <https://support.10xgenomics.com/single-cell-gene-expression/datasets>, and processed it with the SingleR pipeline. To reduce computation times and to make the analyses simpler, we randomly selected 200 cells with >500 non-zero genes from 10 immune populations.
+
+```{r}
+load ('~/Documents/SingleR/SingleR/data/10x (Zheng) - 2000cells.RData')
+out = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,
+            singler$seurat@dr$tsne@cell.embeddings,do.label=FALSE,
+            do.letters =F,labels=singler$seurat@meta.data$orig.ident, 
+            dot.size = 2)
+out$p
+```
+
+The tSNE plots allows to distinguish most cell types, but the T-cells subsets are all blurred together. 
+
+We first look at the Seurat clustering:
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[2]]$SingleR.single,
+            singler$seurat@dr$tsne@cell.embeddings,do.label=T,
+            do.letters =F,labels=singler$seurat@ident, 
+            dot.size = 2,label.size=4)
+out$p
+kable(table(singler$seurat@meta.data$orig.ident,singler$seurat@ident))
+```
+
+We can see that the performs relatively well; however, regulatory T-cells are completely dissolved in the memory T-cells cluster.
+
+SingleR using Blueprint+ENCODE (BE) as reference produced the following annotations before fine-tuning:
+
+```{r}
+SingleR.DrawHeatmap(singler$singler[[2]]$SingleR.single,top.n=Inf,
+                    clusters = singler$seurat@meta.data$orig.ident)
+```
+
+We can see that before fine-tuning, there is strong blurring between T-cells states, which cannot be distinguished.
+
+However, with fine-tuning we obtain the following annotations:
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[2]]$SingleR.single,
+          singler$seurat@dr$tsne@cell.embeddings,do.label=FALSE,
+          do.letters =F,labels=singler$singler[[2]]$SingleR.single$labels, 
+          dot.size = 2)
+out$p
+kable(table(singler$seurat@meta.data$orig.ident,
+            singler$singler[[2]]$SingleR.single$labels))
+```
+
+By observing the colors we can see that the CD4+ T-cell cluster can rouglhy be divided in to 4 states, from naive CD4+ T-cells on the bottom (green), to central memory and effector memory CD4+ T-cells in the middle (purple and orange) and Tregs in the top (pink), in accordance with the original identites. 
+
+While it is not perfect, it provides us a much more granular view of the cell states without the need to go over many markers that might not be in the data at all, and their interpretation is sometimes confusing:
+
+```{r}
+df = data.frame(x=singler$seurat@dr$tsne@cell.embeddings[,1],
+                y=singler$seurat@dr$tsne@cell.embeddings[,2],
+                t(as.matrix(singler$seurat@data[c('CD3E','CD4','CD8A',
+                        'CCR7','GZMA','GNLY','MS4A1','CD14','CD34'),])))
+df = melt(df,id.vars = c('x','y'))
+ggplot(df,aes(x=x,y=y,color=value)) + geom_point(size=0.3)+scale_color_gradient(low="gray", high="blue") + facet_wrap(~variable,ncol=3) +theme_classic()+xlab('')+ylab('')
+```
+ 
+Interstingly, SingleR suggests a more granular view of the B-cell cluster, splitting it to naive and memory B-cells.
+
+Finally, we compared our method to two other classification methods. [Kang et al., Nature Biotechnology [-@Kang2017]](https://www.nature.com/articles/nbt.4042) used sets of markers learned from scRNA-seq PBMCs (from Zheng et al.) to correlate each single cell:
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[2]]$SingleR.single,
+            singler$seurat@dr$tsne@cell.embeddings,do.label=F,
+            do.letters =F,labels=singler$other[,'Kang'], 
+            dot.size = 2)
+out$p
+```
+
+We can see that this methods has limited usability. 
+
+A bulk reference-based method by [Li et. al, Nature Genetics, [-@Li2017]](https://www.nature.com/articles/ng.3818) used a reference-based approach (but without fine-tuning).
+
+```{r}
+out = SingleR.PlotTsne(singler$singler[[2]]$SingleR.single,
+          singler$seurat@dr$tsne@cell.embeddings,do.label=F,
+          do.letters =F,labels=singler$other[,'RCA'], 
+          dot.size = 2,font.size=5)
+out$p
+```
+
+Here we can see that the microrray reference is not able to distinguish CD4+ and CD8+ T-cells, and without fine-tuning results it does not provide a sufficient solution for annotation.
+
+SingleR also allows to detect rare events. For example, lets take a deeper look at the sorted Monocytes: 
+
+```{r}
+monocytes = SingleR.Subset(singler,singler$seurat@meta.data$orig.ident=='Monocytes')
+out = SingleR.PlotTsne(monocytes$singler[[2]]$SingleR.single,
+          monocytes$seurat@dr$tsne@cell.embeddings,do.label=F,
+          do.letters =F, dot.size = 2)
+out$p
+```
+
+We can see that the t-SNE plot already suggests that there are 16 cells that are not part of the main cluster (which means that the sorting purity was ~92%). SingleR detected those cells to be plasma cells (4 cells), T-cells (8 cells), 2 progenitors, 1 DC and 1 NK cell. Is SingleR correct?
+
+```{r}
+SingleR.DrawHeatmap(monocytes$singler[[2]]$SingleR.single,top.n=20,clusters=monocytes$singler[[2]]$SingleR.single$labels)
+```
+
+We can see that SingleR is quite convinced in its calls, giving low monocytes scores to those cells. Using markers for rare cell types (at least in the monocytes sorted cells) is problematic, since marker-based analysis is focused on clusters and not on single cells. 
+
+Interstingly, as in the t-SNE plot we see two distinct monocytes clusters, showing the ability to use SingleR for clustering.
+
+## SingleR web tool
+
+The SingleR web tool contains >35 publicly available scRNA-seq. All data has been preprocessed with the tools described above and the web tools allows the user immediate access to analyze the data and perform further investigations on published single cell data. In addition, we invite non-tech savvy users to upload their own scRNA-seq data which will be analyzed on our servers and will process a SignleR object that can then be uploaded and used on the website (privately, only the user with the object will is able to view it). Please visit <http://comphealth.ucsf.edu/SingleR> for more information.
+
+Thanks,
+
+The SingleR team
+
+<dvir.aran@ucsf.edu>
+
+## References
