@@ -1,10 +1,10 @@
 ---
 title: "SingleR 1.0 - Method overview and examples"
 output: 
-  #html_document:
-  #  code_folding: hide
-  pdf_document:
-        toc: true
+  html_document:
+    code_folding: hide
+  #pdf_document:
+  #      toc: true
 bibliography: Citations.bib
 
 ---
