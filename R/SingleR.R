@@ -368,16 +368,16 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
   if (order.by.clusters==T) {
     data = data[,order(clusters$Clusters)]
     clusters = clusters[order(clusters$Clusters),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
   } else if (!is.null(cells_order)) {
     data = data[,order(cells_order)]
     clusters = clusters[order(cells_order),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
   } else {
     if (!is.null(clusters)) {
-      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,silent=silent)
+      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,silent=silent)
     } else {
-      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,silent=silent,filename='~/Documents/SingleR/manuscript/tempa.png',width=8,height=5)
+      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,silent=silent,filename='~/Documents/SingleR/manuscript/tempa.png',width=8,height=5)
       
     }
   }
@@ -492,15 +492,17 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL) {
   numClusters = min(detectCores(all.tests = FALSE, logical = TRUE),4)
   # break to groups of 1000 cells
   scores = matrix(NA,length(egc),ncol(sc_data))
-  wind = seq(1,ncol(sc_data),by=10)
+  wind = seq(1,ncol(sc_data),by=1000)
   print(paste('Using sets of 1000 cells. Running',length(wind),'times.'))
   for (i in wind) {
-    last = min(ncol(sc_data),i+9)
-    scores[,i:last] = gsva(sc_data[,i:last],egc,method='ssgsea',ssgsea.norm=F,parallel.sz=numClusters,parallel.type='FORK')
+    last = min(ncol(sc_data),i+999)
+    a = gsva(sc_data[,i:last],egc,method='ssgsea',ssgsea.norm=F,parallel.sz=numClusters,parallel.type='FORK')
+    scores[,i:last] = a
   }
   mmin = rowMins(scores)
   mmax = rowMaxs(scores)
   scores = scores/(mmax-mmin)
+  rownames(scores) = rownames(a)
   #rownames(scores) = c('G1/S','G2/M')
   output = data.frame(t(scores))
   
@@ -515,16 +517,16 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL) {
 
 #' Map clusters to values
 #'
-#' @param seurat_clusters the clusters for each single cell
+#' @param cluster_ids the cluster ids of each single cell
 #' @param singler_clusters the cluster annotation for each cluster
 #'
 #' @return annotation for each single cell
-clusters.map.values = function(seurat_clusters,singler_clusters) {
+clusters.map.values = function(cluster_ids,singler_clusters) {
   singler_clusters = as.matrix(singler_clusters)
-  seurat_clusters = as.matrix(seurat_clusters)
+  cluster_ids = as.matrix(cluster_ids)
   singler_clusters = as.matrix(singler_clusters[sort.int(as.numeric(rownames(singler_clusters)),index.return=TRUE)$ix,])
-  A = rownames(singler_clusters) %in% unique(seurat_clusters)
-  clusters = plyr::mapvalues(seurat_clusters, from = sort(as.numeric(unique(seurat_clusters))), to = paste0(rownames(singler_clusters)[A],": ",singler_clusters[A]))
+  A = rownames(singler_clusters) %in% unique(cluster_ids)
+  clusters = plyr::mapvalues(cluster_ids, from = sort(as.numeric(unique(cluster_ids))), to = paste0(rownames(singler_clusters)[A],": ",singler_clusters[A]))
 }
 
 #' SingleR.Cluster - using the scores data to cluster single cells.
@@ -534,14 +536,14 @@ clusters.map.values = function(seurat_clusters,singler_clusters) {
 #'
 #' @return cluster id for each single cell
 SingleR.Cluster = function(SingleR,num.clusts=10) {
-  hc = hclust(dist(SingleR$scores),method='ward.D')
+  hc = hclust(dist(SingleR$scores),method='ward.D2')
   cl = cutree(hc,k=num.clusts)
   cl
 }
 
 #' Subseting a SingleR object
 #'
-#' @param singler as SingleR object which includes a Seurat object.
+#' @param singler as SingleR object
 #' @param subsetdata
 #'
 #' @return
@@ -549,11 +551,7 @@ SingleR.Cluster = function(SingleR,num.clusts=10) {
 #'
 #' @examples
 SingleR.Subset = function(singler,subsetdata) {
-  singler$seurat@data = singler$seurat@data[,subsetdata]
-  singler$seurat@dr$tsne@cell.embeddings = singler$seurat@dr$tsne@cell.embeddings[subsetdata,]
-  singler$seurat@meta.data = subset(singler$seurat@meta.data,subsetdata)
-  singler$seurat@ident = singler$seurat@ident[subsetdata]
-  singler$seurat@cell.names = singler$seurat@cell.names[subsetdata]
+  
   
   for (i in 1:length(singler$singler)) {
     singler$singler[[i]]$SingleR.single$cell.names = singler$singler[[i]]$SingleR.single$cell.names[subsetdata]
@@ -576,6 +574,15 @@ SingleR.Subset = function(singler,subsetdata) {
   if(!is.null(singler[['other']])) {
     singler$other = singler$other[subsetdata,]
   }
+  
+  if (!is.null(singler$seurat)) {
+    singler$seurat@data = singler$seurat@data[,subsetdata]
+    singler$seurat@dr$tsne@cell.embeddings = singler$seurat@dr$tsne@cell.embeddings[subsetdata,]
+    singler$seurat@meta.data = subset(singler$seurat@meta.data,subsetdata)
+    singler$seurat@ident = singler$seurat@ident[subsetdata]
+    singler$seurat@cell.names = singler$seurat@cell.names[subsetdata]
+  }
+  
   singler
 }
 
@@ -668,7 +675,6 @@ SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='H
   
   print(paste0('Annotating data with ',ref$name,'...'))
   
-  
   print(paste('Variable genes method:',variable.genes))
   
   if (variable.genes=='de') {
@@ -684,6 +690,11 @@ SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='H
   }
   
   SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres,genes = variable.genes)
+  
+  if (clusters==NULL) {
+    clusters = SingleR.Cluster(SingleR.single,num.clusts=10)
+  }
+  
   SingleR.clusters = SingleR("cluster",sc.data,ref$data,types=types, clusters = factor(clusters),sd.thres = ref$sd.thres,genes = variable.genes)
   
   about = list(Organism = capitalize(species),Citation=citation,Technology = technology,RefData=ref$name)
@@ -750,33 +761,50 @@ SingleR.CreateSeurat <- function(project,sc.data,min.genes = 500,min.cells = 2,r
   sc
 }
 
-#' Wrapper function to create a SingleR+Seurat object
+SingleR.CreateKangAnnotations = function(sc.data) {
+  if (!exists('cell.type.classification'))
+    data('cell.type.cor.classification')
+  rownames(cell.type.classification$cell.types.avg) = tolower(rownames(cell.type.classification$cell.types.avg))
+  A = intersect(rownames(sc.data),rownames(cell.type.classification$cell.types.avg))
+  r = cor(cell.type.classification$cell.types.avg[A,],as.matrix(sc.data.gl[A,]),method='spearman')
+  kang_annotation = max.col(t(r))
+  kang_annotation = plyr::mapvalues(kang_annotation,from=seq(1,ncol(cell.type.classification$cell.types.avg)),to=colnames(cell.type.classification$cell.types.avg),warn_missing=F)
+  names(kang_annotation) = colnames(r)
+  
+  list(r=r,kang_annotation=kang_annotation)
+}
+
+#' Wrapper function to create a SingleR object + Seurat object
 #'
-#' @param counts
-#' @param annot
-#' @param project.name
-#' @param min.genes
-#' @param min.cells
-#' @param regress.out
-#' @param npca
-#' @param technology
-#' @param species
-#' @param citation
-#' @param ref.list
-#' @param reduce.file.size
-#' @param normalize.gene.length
-#' @param do.signatures
-#' @param temp.dir
+#' @param counts a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.
+#' @param annot a tab delimited text file or a data.frame. Rownames correspond to column names in the counts data
+#' @param project.name the project name
+#' @param min.genes Include cells where at least this many genes are detected.
+#' @param technology The technology used for creating the single-cell data.
+#' @param species The species of the sample ('Human' or 'Mouse')
+#' @param citation a citation for the project
+#' @param ref.list a list of reference objects. If NULL uses the predefined reference objects - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode. 
+#' @param normalize.gene.length if a full-length method set to TRUE, if a 3' method set to FALSE.
+#' @param do.signatures create signatures data
+#' @param min.cells include genes with detected expression in at least this many cells. Will subset the raw.data matrix as well. To reintroduce excluded genes, create a new object with a lower cutoff.
+#' @param regress.out variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.
+#' @param npca a vector of the dimensions to use in construction of the clustering and tSNE plot
+#' @param reduce.seurat.object if TRUE removes the raw data and other high memory objects from the Seurat object.
+#' @param temp.dir used by the SingleR web app.
 #'
-#' @return
-#' @export
-#'
-#' @examples
-SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500,min.cells=2,regress.out='nUMI',npca=10,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',temp.dir=NULL) {
+#' @return a SingleR object containg a Seurat object
+CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',min.cells=2,regress.out='nUMI',npca=10,clusters=NULL,temp.dir=NULL) {
   if (typeof(counts) == 'character') {
-    counts <- as.matrix(read.table(counts, header=TRUE, sep="\t", row.names=1, as.is=TRUE,comment.char='!'))
-  }
-  print(dim(counts))
+    if (file.info(counts)$isdir==T) {
+      counts = as.matrix(Read10X(counts))
+    } else if (file.info(counts)$isdir==F) {
+      counts <- as.matrix(read.table(counts, header=TRUE, sep="\t", row.names=1, as.is=TRUE,comment.char='!'))
+    } else {
+      stop('Cannot find file or directory.')
+    }
+  } 
+  
+  print(paste('Dimensions of counts data:',dim(counts)))
   
   A = tolower(rownames(counts))
   dupA = duplicated(A)
@@ -801,11 +829,28 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
     names(orig.ident)=colnames(counts)
   }
   
+  singler = list()
   print(project.name)
+  
+  #creat Seurat object
   sc = SingleR.CreateSeurat(project.name,counts,min.genes=min.genes,min.cells=min.cells,regress.out=regress.out,npca=npca,species=species,temp.dir=temp.dir)
   
   orig.ident = orig.ident[colnames(sc@data)]
   sc.data = counts[,colnames(sc@data)]
+  
+  sc@meta.data$orig.ident = factor(orig.ident)
+  
+  clusters = singler$seurat@ident
+  
+  if(reduce.file.size==T) {
+    sc@raw.data = c()
+    sc@scale.data = c()
+    sc@calc.params = list()
+  }
+  
+  singler$seurat = sc 
+  
+  # create SingleR
   
   if (normalize.gene.length == F) {
     sc.data.gl = sc.data
@@ -817,8 +862,6 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
       sc.data.gl = TPM(sc.data,mouse_lengths)
     }
   }
-  
-  clusters = sc@ident
   
   if (length(ref.list)==0) {
     if (species == 'Mouse') {
@@ -842,34 +885,21 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
       SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
     })
   }
-  sc@meta.data$orig.ident = factor(orig.ident)
+  
+  singler$singler = res
   
   if (do.signatures==TRUE) {
     signatures = calculateSignatures(sc.data.gl,species=species)
-    singler = list(seurat = sc,singler = res,signatures = signatures)
+    singler$signatures = signatures
     
-  } else {
-    singler = list(seurat = sc,singler = res)
   }
-  
   
   if (species == 'Human') {
-    if (!exists('cell.type.classification'))
-      data('cell.type.cor.classification')
-    rownames(cell.type.classification$cell.types.avg) = tolower(rownames(cell.type.classification$cell.types.avg))
-    A = intersect(rownames(sc.data.gl),rownames(cell.type.classification$cell.types.avg))
-    r = cor(cell.type.classification$cell.types.avg[A,],as.matrix(sc.data.gl[A,]),method='spearman')
-    other_annotation = max.col(t(r))
-    other_annotation = plyr::mapvalues(other_annotation,from=seq(1,ncol(cell.type.classification$cell.types.avg)),to=colnames(cell.type.classification$cell.types.avg),warn_missing=F)
-    names(other_annotation) = colnames(r)
-    singler$other = other_annotation
+    kang = SingleR.CreateKangAnnotations(sc.data.gl)
+    singler$other = kang$kang_annotation
   }
   
-  if(reduce.file.size==T) {
-    singler$seurat@raw.data = c()
-    singler$seurat@scale.data = c()
-    singler$seurat@calc.params = list()
-  }
+  singler$meta.data = list(project.name=project.name,orig.ident=orig.ident,clusters=sc@ident,xy=sc@dr$tsne@cell.embeddings)
   
   singler = remove.Unnecessary.Data.single(singler)
   
@@ -877,4 +907,117 @@ SingleR.CreateFromCounts = function(counts,annot=NULL,project.name,min.genes=500
   
 }
 
+#' Wrapper function to create a SingleR object
+#'
+#' @param counts a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.
+#' @param annot a tab delimited text file or a data.frame. Rownames correspond to column names in the counts data
+#' @param project.name the project name
+#' @param min.genes Include cells where at least this many genes are detected.
+#' @param technology The technology used for creating the single-cell data.
+#' @param species The species of the sample ('Human' or 'Mouse')
+#' @param citation a citation for the project
+#' @param ref.list a list of reference objects. If NULL uses the predefined reference objects - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode. 
+#' @param normalize.gene.length if a full-length method set to TRUE, if a 3' method set to FALSE.
+#' @param do.signatures create signatures data
+#' @param clusters input cluster id for each of the cells with at least min.genes, if NULL uses SingleR clusterings.
+#' @param temp.dir
+#'
+#' @return a SingleR object
+CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',create.seurat=T,min.cells=2,regress.out='nUMI',npca=10,clusters=NULL,temp.dir=NULL) {
+  if (typeof(counts) == 'character') {
+    if (file.info(counts)$isdir==T) {
+      counts = as.matrix(Read10X(counts))
+    } else if (file.info(counts)$isdir==F) {
+      counts <- as.matrix(read.table(counts, header=TRUE, sep="\t", row.names=1, as.is=TRUE,comment.char='!'))
+    } else {
+      stop('Cannot find file or directory.')
+    }
+  } 
+  
+  print(paste('Dimensions of counts data:',dim(counts)))
+  
+  A = tolower(rownames(counts))
+  dupA = duplicated(A)
+  if (sum(dupA)>0) {
+    counts = counts[!dupA,]
+  }
+  
+  if (species=='Mouse') {
+    rownames(counts) = paste(toupper(substr(rownames(counts), 1, 1)), tolower(substr(rownames(counts), 2, nchar(rownames(counts)))), sep="")
+  }
+  
+  if (!is.null(annot)) {
+    if (length(annot) == 1) {
+      types <- read.table(annot, header=TRUE, sep="\t", row.names=1, as.is=TRUE)
+      orig.ident = types[,1]
+      names(orig.ident) = rownames(types)
+    } else {
+      orig.ident = annot
+    }
+  } else {
+    orig.ident = rep('NA',ncol(counts))
+    names(orig.ident)=colnames(counts)
+  }
+  
+  singler = list()
+  print(project.name)
+  
+  N = colSums(counts>0)
+  orig.ident = orig.ident[N>=min.genes]
+  sc.data = counts[,N>=min.genes]
+  
+  if (normalize.gene.length == F) {
+    sc.data.gl = sc.data
+    rownames(sc.data.gl) = tolower(rownames(sc.data.gl))
+  } else {
+    if (species == 'Human') {
+      sc.data.gl = TPM(sc.data,human_lengths)
+    } else if (species == 'Mouse') {
+      sc.data.gl = TPM(sc.data,mouse_lengths)
+    }
+  }
+  
+  if (length(ref.list)==0) {
+    if (species == 'Mouse') {
+      if (!exists('immgen'))
+        data('Immgen')
+      if (!exists('mouse.rnaseq'))
+        data('Mouse-RNAseq')
+      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes),
+                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
+      )
+    } else if (species == 'Human') {
+      if(!exists('hpca'))
+        data ('HPCA')
+      if (!exists('blueprint_encode'))
+        data('Blueprint_Encode')
+      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes),
+                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes))
+    }
+  } else {
+    res = lapply(ref.list, FUN=function(x) {
+      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
+    })
+  }
+  
+  singler$singler = res
+  
+  if (do.signatures==TRUE) {
+    signatures = calculateSignatures(sc.data.gl,species=species)
+    singler$signatures = signatures
+    
+  }
+  
+  if (species == 'Human') {
+    kang = SingleR.CreateKangAnnotations(sc.data.gl)
+    singler$other = kang$kang_annotation
+  }
+  
+  singler$meta.data = list(project.name=project.name,orig.ident=orig.ident)
+  
+  singler = remove.Unnecessary.Data.single(singler)
+  
+  singler
+  
+}
 
