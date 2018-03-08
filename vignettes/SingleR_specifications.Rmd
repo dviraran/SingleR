@@ -3,6 +3,8 @@ title: "SingleR 1.0 - Method overview and examples"
 output: 
   html_document:
     code_folding: hide
+  #pdf_document:
+  #      toc: true
 bibliography: Citations.bib
 
 ---
@@ -72,11 +74,11 @@ The open source code is available in the SingleR Github repository.
 We provide a wrapper function (*SingleR.CreateFromCounts*) which creates a singler object which contains a Seurat object and singler annotations with multiple references. Click on 'code' to see an example.
 
 ```{r eval=FALSE,echo=TRUE}
-res = SingleR.CreateFromCounts(counts='GSE74923_series_matrix.txt',
+singler = CreateSinglerSeuratObject(counts='GSE74923_series_matrix.txt',
        annot='GSE74923_types.txt',project.name='GSE74923',min.genes=500,
        min.cells=2,regress.out='nUMI',technology='C1',species='Mouse',
        citation='Kimmerling et al. 2016',reduce.file.size = T, 
-       normalize.gene.length = T,working.dir=NULL)
+       normalize.gene.length = T)
 ```
 
 After reading the files with the counts and the annotations, this function creates a Seurat object using the wrapper function *SingleR.CreateSeurat*. Next, if the scRNA-seq data is full-length the counts are normalized to gene length (TPM). Then, the *SingleR.CreateObject* is called for each reference data set. Finally, *calculateSignatures* is called to create a reference datasets.

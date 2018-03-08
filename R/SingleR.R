@@ -691,7 +691,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='H
   
   SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres,genes = variable.genes)
   
-  if (clusters==NULL) {
+  if (is.null(clusters)) {
     clusters = SingleR.Cluster(SingleR.single,num.clusts=10)
   }
   
@@ -793,7 +793,7 @@ SingleR.CreateKangAnnotations = function(sc.data) {
 #' @param temp.dir used by the SingleR web app.
 #'
 #' @return a SingleR object containg a Seurat object
-CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',min.cells=2,regress.out='nUMI',npca=10,clusters=NULL,temp.dir=NULL) {
+CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',min.cells=2,regress.out='nUMI',npca=10,temp.dir=NULL) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))
@@ -804,7 +804,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
     }
   } 
   
-  print(paste('Dimensions of counts data:',dim(counts)))
+  print(paste0('Dimensions of counts data: ',ncol(counts),'x',nrow(counts)))
   
   A = tolower(rownames(counts))
   dupA = duplicated(A)
@@ -840,7 +840,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
   
   sc@meta.data$orig.ident = factor(orig.ident)
   
-  clusters = singler$seurat@ident
+  clusters = sc@ident
   
   if(reduce.file.size==T) {
     sc@raw.data = c()
@@ -934,7 +934,7 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,tech
     }
   } 
   
-  print(paste('Dimensions of counts data:',dim(counts)))
+  print(paste0('Dimensions of counts data: ',ncol(counts),'x',nrow(counts)))
   
   A = tolower(rownames(counts))
   dupA = duplicated(A)
