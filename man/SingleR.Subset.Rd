@@ -7,7 +7,7 @@
 SingleR.Subset(singler, subsetdata)
 }
 \arguments{
-\item{singler}{as SingleR object which includes a Seurat object.}
+\item{singler}{as SingleR object}
 
 \item{subsetdata}{}
 }

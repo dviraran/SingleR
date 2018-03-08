@@ -4,10 +4,10 @@
 \alias{clusters.map.values}
 \title{Map clusters to values}
 \usage{
-clusters.map.values(seurat_clusters, singler_clusters)
+clusters.map.values(cluster_ids, singler_clusters)
 }
 \arguments{
-\item{seurat_clusters}{the clusters for each single cell}
+\item{cluster_ids}{the cluster ids of each single cell}
 
 \item{singler_clusters}{the cluster annotation for each cluster}
 }

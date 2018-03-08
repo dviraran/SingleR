@@ -5,7 +5,7 @@
 \title{Plot a heatmap of the scores for all the single cells}
 \usage{
 SingleR.DrawHeatmap(SingleR, labels = NULL, clusters = NULL, top.n = 40,
-  normalize = T, order.by.clusters = F, cells_order = NULL)
+  normalize = T, order.by.clusters = F, cells_order = NULL, silent = F)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}
@@ -21,6 +21,8 @@ SingleR.DrawHeatmap(SingleR, labels = NULL, clusters = NULL, top.n = 40,
 \item{order.by.clusters}{if TRUE columns are ordered by the input clusters, and are not clustered again}
 
 \item{cells_order}{an input order for the column}
+
+\item{silent}{if TRUE do not draw the plot}
 }
 \description{
 Plot a heatmap of the scores for all the single cells

@@ -5,7 +5,8 @@
 \title{Wrapper function to create a SingleR object}
 \usage{
 SingleR.CreateObject(sc.data, ref, clusters, do.main.types = T,
-  species = "Human", citation = "-", technology = "-")
+  species = "Human", citation = "-", technology = "-",
+  variable.genes = "sd")
 }
 \arguments{
 \item{technology}{}
