@@ -1,3 +1,5 @@
+library(compiler)
+enableJIT(2)
 
 # Colors
 qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
@@ -27,6 +29,25 @@ medianMatrix = function(mat,groups) {
   mat.group
 }
 
+quantileMatrix = function(mat,groups,q) {
+  fgroups = levels(factor(groups))
+  mat.group <- do.call(cbind, lapply(fgroups, function(g) {
+    A = groups==g
+    if (nrow(mat)==1) {
+      quantile(mat[A],na.rm=T,probs=q)
+    } else {
+      if(sum(A)==1) {
+        mat[,A]
+      } else {
+        rowQuantiles(mat[,A],na.rm=T,probs=q)
+      }
+    }
+  }))
+  colnames(mat.group) = fgroups
+  rownames(mat.group) = rownames(mat)
+  mat.group
+}
+
 #' SingleR fine-tuning function. Takes top scores per cell type, finds variable genes in the
 #' reference dataset for those cell types and recalculates the scores. This is performed until
 #' only one cell type is left.
@@ -44,48 +65,17 @@ medianMatrix = function(mat,groups) {
 #'
 #' @return the top labels for each single cell
 SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tune.thres,genes,sd.thres,mean_mat) {
-  n = dim(sc_data)[2]
+  N = dim(sc_data)[2]
   numCores = min(detectCores(all.tests = FALSE, logical = TRUE),16)
   print(paste("Fine-tunning round on top cell types (using", numCores, "CPU cores):"))
-  labels = pbmclapply(1:n,FUN=function(i){
+  labels = pbmclapply(1:N,FUN=function(i){
     max_score = max(scores[i,])
     topLabels = names(scores[i,scores[i,]>=max_score-fine.tune.thres])
     if (length(topLabels)==0) {
       return (names(which.max(scores[i,])))
     } else {
       while(length(topLabels)>1) {
-        labels.use = is.element(types,topLabels)
-        ref_data.filtered = as.matrix(ref_data[,labels.use])
-        types.filtered = types[labels.use]
-        mat = mean_mat[,topLabels]
-        if (typeof(genes)=='list') {
-          n = round(1000*(2/3)^(log2(c(ncol(mat)))))
-          utypes = colnames(mat)
-          genes.filtered = unique(unlist(unlist(lapply(utypes,function(j) lapply(utypes, function(i) genes[[i]][[j]][1:n])))))
-          genes.filtered=intersect(tolower(genes.filtered),rownames(mat))
-        } else if (genes[1] == "de") {
-          n = round(500*(2/3)^(log2(c(ncol(mat)))))
-          genes.filtered = unique(unlist(unlist(lapply(1:ncol(mat), function(j) {lapply(1:ncol(mat), function(i) {s=sort(mat[,j]-mat[,i],decreasing=T);s=s[s>0];names(s)[1:min(n,length(s))]})}))))[-1]
-        } else if (genes[1] == "sd") {
-          sd =  rowSds(mat)
-          thres = min(sort(sd,decreasing = TRUE)[500],sd.thres)
-          genes.filtered = intersect(rownames(ref_data)[sd>=thres],rownames(sc_data))
-        } else {
-          genes.filtered=intersect(genes,intersect(rownames(sc_data),(rownames(ref_data))))
-        }
-        
-        ref_data.filtered = ref_data.filtered[genes.filtered,]
-        sc_data.filtered = as.matrix(sc_data[genes.filtered,])
-        data = sc_data.filtered[,i]
-        if (sd(data)>0) {
-          r=cor(data,ref_data.filtered,method='spearman')
-          agg_scores = aggregate(t(r)~types.filtered,FUN = quantile, probs  = quantile.use)
-          max_score = max(agg_scores[,-1])
-          agg_scores = agg_scores[-which.min(agg_scores[,-1]),]
-          topLabels = agg_scores[agg_scores[,-1]>=max_score-fine.tune.thres,1]
-        } else {
-          topLabels = agg_scores[which.max(agg_scores[,-1]),1]
-        }
+        topLabels = fineTuningRound(topLabels,types,ref_data,genes,mean_mat[,topLabels],sd.thres,sc_data[,i],quantile.use,fine.tune.thres)
       }
       return (topLabels)
     }
@@ -97,6 +87,41 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tun
   }
   return(labels)
   
+}
+
+fineTuningRound = function(topLabels,types,ref_data,genes,mat,sd.thres,sc_data,quantile.use,fine.tune.thres) {
+  labels.use = is.element(types,topLabels)
+  ref_data.filtered = as.matrix(ref_data[,labels.use])
+  types.filtered = types[labels.use]
+  if (typeof(genes)=='list') {
+    n = round(1000*(2/3)^(log2(c(ncol(mat)))))
+    utypes = colnames(mat)
+    genes.filtered = unique(unlist(unlist(lapply(utypes,function(j) lapply(utypes, function(i) genes[[i]][[j]][1:n])))))
+    genes.filtered = intersect(tolower(genes.filtered),rownames(mat))
+  } else if (genes[1] == "de") {
+    n = round(500*(2/3)^(log2(c(ncol(mat)))))
+    genes.filtered = unique(unlist(unlist(lapply(1:ncol(mat), function(j) {lapply(1:ncol(mat), function(i) {s=sort(mat[,j]-mat[,i],decreasing=T);s=s[s>0];names(s)[1:min(n,length(s))]})}))))[-1]
+  } else if (genes[1] == "sd") {
+    sd =  rowSds(mat)
+    thres = min(sort(sd,decreasing = TRUE)[500],sd.thres)
+    genes.filtered = intersect(rownames(ref_data)[sd>=thres],names(sc_data))
+  } else {
+    genes.filtered=intersect(genes,intersect(rownames(sc_data),(rownames(ref_data))))
+  }
+  
+  ref_data.filtered = ref_data.filtered[genes.filtered,]
+  sc_data.filtered = as.matrix(sc_data[genes.filtered])
+  #data = sc_data.filtered[,i]
+  if (sd(sc_data.filtered)>0) {
+    r=cor(sc_data.filtered,ref_data.filtered,method='spearman')
+    agg_scores = quantileMatrix(r,types.filtered,quantile.use);
+    max_score = max(agg_scores)
+    agg_scores = agg_scores[,-which.min(agg_scores)]
+    topLabels = names(agg_scores)[agg_scores>=max_score-fine.tune.thres]
+  } else {
+    topLabels = topLabels[1]
+  }
+  topLabels
 }
 
 #' Scoring single cells using reference data set
@@ -113,8 +138,9 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
   ref_data = as.matrix(ref_data[genes,])
   r=cor(sc_data,ref_data,method='spearman')
   
-  agg_scores = aggregate(t(r)~types,FUN = quantile, probs  = quantile.use)
-  labels = agg_scores[max.col(t(agg_scores[,-1])),1]
+  agg_scores = quantileMatrix(r,types,quantile.use);
+  #agg_scores = aggregate(t(r)~types,FUN = quantile, probs  = quantile.use)
+  labels = colnames(agg_scores)[max.col(agg_scores)]
   output = list()
   
   
@@ -122,8 +148,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
     names(labels)=t(colnames(sc_data))
   }
   
-  output$scores = as.matrix(agg_scores[,-1])
-  rownames(output$scores) = agg_scores[,1]
+  output$scores = as.matrix(t(agg_scores))
   
   output$labels = as.matrix(labels)
   output$r = r
@@ -333,7 +358,7 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
     data = data[labels,m>(thres-1e-6)]^3
   }
   data = t(data)
-
+  
   if (!is.null(clusters)) {
     clusters = as.data.frame(clusters)
     colnames(clusters) = 'Clusters'
@@ -525,18 +550,25 @@ SingleR.Subset = function(singler,subsetdata) {
     singler$singler[[i]]$SingleR.clusters$cell.names = singler$singler[[i]]$SingleR.clusters$cell.names[subsetdata]
     singler$singler[[i]]$SingleR.single$scores = singler$singler[[i]]$SingleR.single$scores[subsetdata,]
     singler$singler[[i]]$SingleR.single$labels = as.matrix(singler$singler[[i]]$SingleR.single$labels[subsetdata,])
+    if (!is.null(singler$singler[[i]]$SingleR.single$labels1))
+      
+      singler$singler[[i]]$SingleR.single$labels1 = as.matrix(singler$singler[[i]]$SingleR.single$labels1[subsetdata])
+    
     if(!is.null(singler$singler[[i]]$SingleR.single.main)) {
       singler$singler[[i]]$SingleR.single.main$cell.names = singler$singler[[i]]$SingleR.single.main$cell.names[subsetdata]
       singler$singler[[i]]$SingleR.clusters.main$cell.names = singler$singler[[i]]$SingleR.clusters.main$cell.names[subsetdata]
       singler$singler[[i]]$SingleR.single.main$scores = singler$singler[[i]]$SingleR.single.main$scores[subsetdata,]
       singler$singler[[i]]$SingleR.single.main$labels = as.matrix(singler$singler[[i]]$SingleR.single.main$labels[subsetdata,])
+      if (!is.null(singler$singler[[i]]$SingleR.single.main$labels1))
+        singler$singler[[i]]$SingleR.single.main$labels1 = as.matrix(singler$singler[[i]]$SingleR.single.main$labels1[subsetdata])
+      
     }
   }
   if (!is.null(singler[["signatures"]])) {
     singler$signatures = singler$signatures[subsetdata,]
   }
   if(!is.null(singler[['other']])) {
-    singler$other = singler$other[subsetdata]
+    singler$other = singler$other[subsetdata,]
   }
   singler
 }
@@ -621,20 +653,20 @@ CreateVariableGeneSet = function(ref_data,types,n) {
 SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='Human',citation='-',technology='-',variable.genes='sd') {
   
   types = ref$types
-
+  
   print(paste0('Annotating data with ',ref$name,'...'))
-
+  
   
   print(paste('Variable genes method:',variable.genes))
   
   if (variable.genes=='de') {
-      if (!is.null(ref$de.genes)) {
-        variable.genes = ref$de.genes
-        variable.genes.main = ref$de.genes.main
-      } else {
-        variable.genes = CreateVariableGeneSet(ref$data,ref$types,200)
-        variable.genes.main = CreateVariableGeneSet(ref$data,ref$main_types,300)
-      }
+    if (!is.null(ref$de.genes)) {
+      variable.genes = ref$de.genes
+      variable.genes.main = ref$de.genes.main
+    } else {
+      variable.genes = CreateVariableGeneSet(ref$data,ref$types,200)
+      variable.genes.main = CreateVariableGeneSet(ref$data,ref$main_types,300)
+    }
   } else {
     variable.genes.main = variable.genes
   }
