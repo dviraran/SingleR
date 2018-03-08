@@ -97,7 +97,7 @@ fineTuningRound = function(topLabels,types,ref_data,genes,mat,sd.thres,sc_data,q
     n = round(1000*(2/3)^(log2(c(ncol(mat)))))
     utypes = colnames(mat)
     genes.filtered = unique(unlist(unlist(lapply(utypes,function(j) lapply(utypes, function(i) genes[[i]][[j]][1:n])))))
-    genes.filtered = intersect(tolower(genes.filtered),rownames(mat))
+    genes.filtered = intersect(genes.filtered,rownames(mat))
   } else if (genes[1] == "de") {
     n = round(500*(2/3)^(log2(c(ncol(mat)))))
     genes.filtered = unique(unlist(unlist(lapply(1:ncol(mat), function(j) {lapply(1:ncol(mat), function(i) {s=sort(mat[,j]-mat[,i],decreasing=T);s=s[s>0];names(s)[1:min(n,length(s))]})}))))[-1]
@@ -190,7 +190,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
     utypes = unique(types)
     n = round(1000*(2/3)^(log2(c(ncol(mat)))))
     genes.filtered = unique(unlist(unlist(lapply(utypes,function(j) lapply(utypes, function(i) genes[[i]][[j]][1:n])))))
-    genes.filtered = intersect(tolower(genes.filtered),rownames(mat))
+    genes.filtered = intersect(genes.filtered,rownames(mat))
     print(paste0("Number of DE genes:", length(genes.filtered)))
   } else if (genes[1] == "de") {
     n = round(500*(2/3)^(log2(c(ncol(mat)))))
@@ -377,7 +377,7 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
     if (!is.null(clusters)) {
       pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,annotation_col = clusters,silent=silent)
     } else {
-      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,silent=silent)
+      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D',fontsize_row=6,silent=silent,filename='~/Documents/SingleR/manuscript/tempa.png',width=8,height=5)
       
     }
   }
@@ -489,8 +489,18 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL) {
   
   sc_data = as.matrix(sc_data)
   rownames(sc_data) = tolower(rownames(sc_data))
-  numClusters = min(detectCores(all.tests = FALSE, logical = TRUE),16)
-  scores = gsva(sc_data,egc,method='ssgsea',parallel.sz=numClusters,parallel.type='FORK')
+  numClusters = min(detectCores(all.tests = FALSE, logical = TRUE),4)
+  # break to groups of 1000 cells
+  scores = matrix(NA,length(egc),ncol(sc_data))
+  wind = seq(1,ncol(sc_data),by=10)
+  print(paste('Using sets of 1000 cells. Running',length(wind),'times.'))
+  for (i in wind) {
+    last = min(ncol(sc_data),i+9)
+    scores[,i:last] = gsva(sc_data[,i:last],egc,method='ssgsea',ssgsea.norm=F,parallel.sz=numClusters,parallel.type='FORK')
+  }
+  mmin = rowMins(scores)
+  mmax = rowMaxs(scores)
+  scores = scores/(mmax-mmin)
   #rownames(scores) = c('G1/S','G2/M')
   output = data.frame(t(scores))
   
@@ -550,17 +560,13 @@ SingleR.Subset = function(singler,subsetdata) {
     singler$singler[[i]]$SingleR.clusters$cell.names = singler$singler[[i]]$SingleR.clusters$cell.names[subsetdata]
     singler$singler[[i]]$SingleR.single$scores = singler$singler[[i]]$SingleR.single$scores[subsetdata,]
     singler$singler[[i]]$SingleR.single$labels = as.matrix(singler$singler[[i]]$SingleR.single$labels[subsetdata,])
-    if (!is.null(singler$singler[[i]]$SingleR.single$labels1))
-      
-      singler$singler[[i]]$SingleR.single$labels1 = as.matrix(singler$singler[[i]]$SingleR.single$labels1[subsetdata])
     
     if(!is.null(singler$singler[[i]]$SingleR.single.main)) {
       singler$singler[[i]]$SingleR.single.main$cell.names = singler$singler[[i]]$SingleR.single.main$cell.names[subsetdata]
       singler$singler[[i]]$SingleR.clusters.main$cell.names = singler$singler[[i]]$SingleR.clusters.main$cell.names[subsetdata]
       singler$singler[[i]]$SingleR.single.main$scores = singler$singler[[i]]$SingleR.single.main$scores[subsetdata,]
       singler$singler[[i]]$SingleR.single.main$labels = as.matrix(singler$singler[[i]]$SingleR.single.main$labels[subsetdata,])
-      if (!is.null(singler$singler[[i]]$SingleR.single.main$labels1))
-        singler$singler[[i]]$SingleR.single.main$labels1 = as.matrix(singler$singler[[i]]$SingleR.single.main$labels1[subsetdata])
+      singler$singler[[i]]$SingleR.single.main$labels1 = as.matrix(singler$singler[[i]]$SingleR.single.main$labels1[subsetdata,])
       
     }
   }
@@ -628,7 +634,13 @@ capitalize <- function(x) {
 #' @return list of lists. Each list contains a list for each cell types with n differential genes.
 CreateVariableGeneSet = function(ref_data,types,n) {
   mat = medianMatrix(ref_data,types)
-  genes = lapply(1:ncol(mat), function(j) {lapply(1:ncol(mat), function(i) {s=sort(mat[,j]-mat[,i],decreasing=T);s=s[s>0];names(s)[1:min(n,length(s))]})})
+  genes = lapply(1:ncol(mat), function(j) {
+    lapply(1:ncol(mat), function(i) {
+      s=sort(mat[,j]-mat[,i],decreasing=T)
+      s=s[s>0]
+      tolower(names(s)[1:min(n,length(s))])
+    })
+  } )
   names(genes) = colnames(mat)
   for (i in 1:length(genes)) {
     names(genes[[i]]) = colnames(mat)
