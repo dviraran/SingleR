@@ -766,7 +766,7 @@ SingleR.CreateKangAnnotations = function(sc.data) {
     data('cell.type.cor.classification')
   rownames(cell.type.classification$cell.types.avg) = tolower(rownames(cell.type.classification$cell.types.avg))
   A = intersect(rownames(sc.data),rownames(cell.type.classification$cell.types.avg))
-  r = cor(cell.type.classification$cell.types.avg[A,],as.matrix(sc.data.gl[A,]),method='spearman')
+  r = cor(cell.type.classification$cell.types.avg[A,],as.matrix(sc.data[A,]),method='spearman')
   kang_annotation = max.col(t(r))
   kang_annotation = plyr::mapvalues(kang_annotation,from=seq(1,ncol(cell.type.classification$cell.types.avg)),to=colnames(cell.type.classification$cell.types.avg),warn_missing=F)
   names(kang_annotation) = colnames(r)
@@ -804,7 +804,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
     }
   } 
   
-  print(paste0('Dimensions of counts data: ',ncol(counts),'x',nrow(counts)))
+  print(paste0('Dimensions of counts data: ',nrow(counts),'x',ncol(counts)))
   
   A = tolower(rownames(counts))
   dupA = duplicated(A)
@@ -923,7 +923,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
 #' @param temp.dir
 #'
 #' @return a SingleR object
-CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',create.seurat=T,min.cells=2,regress.out='nUMI',npca=10,clusters=NULL,temp.dir=NULL) {
+CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,do.signatures=T,variable.genes='de',create.seurat=T,min.cells=2,regress.out='nUMI',npca=10,clusters=NULL,temp.dir=NULL) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))
@@ -934,7 +934,7 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,tech
     }
   } 
   
-  print(paste0('Dimensions of counts data: ',ncol(counts),'x',nrow(counts)))
+  print(paste0('Dimensions of counts data: ',nrow(counts),'x',ncol(counts)))
   
   A = tolower(rownames(counts))
   dupA = duplicated(A)
