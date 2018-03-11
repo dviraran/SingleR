@@ -377,7 +377,7 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
     if (!is.null(clusters)) {
       pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,silent=silent)
     } else {
-      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,silent=silent,filename='~/Documents/SingleR/manuscript/tempa.png',width=8,height=5)
+      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,silent=silent,width=8,height=5)
       
     }
   }
@@ -536,9 +536,10 @@ clusters.map.values = function(cluster_ids,singler_clusters) {
 #'
 #' @return cluster id for each single cell
 SingleR.Cluster = function(SingleR,num.clusts=10) {
-  hc = hclust(dist(SingleR$scores),method='ward.D2')
+  scores = t(scale(t(SingleR$scores^3)))
+  hc = hclust(dist(scores,method='euclidean'),method='ward.D2')
   cl = cutree(hc,k=num.clusts)
-  cl
+  list(hc=hc,cl=factor(cl))
 }
 
 #' Subseting a SingleR object
@@ -691,25 +692,31 @@ SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='H
   
   SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres,genes = variable.genes)
   
+  SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
+  
   if (is.null(clusters)) {
-    clusters = SingleR.Cluster(SingleR.single,num.clusts=10)
+    clusters = SingleR.single$clusters$cl
   }
   
   SingleR.clusters = SingleR("cluster",sc.data,ref$data,types=types, clusters = factor(clusters),sd.thres = ref$sd.thres,genes = variable.genes)
   
   about = list(Organism = capitalize(species),Citation=citation,Technology = technology,RefData=ref$name)
+  
+  
   singler = list(SingleR.single = SingleR.single, SingleR.clusters = SingleR.clusters,about=about)
   
   if (do.main.types==T) {
     print(paste0('Annotating data with ',ref$name,' (Main types)...'))
     types = ref$main_types
     singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.8, genes = variable.genes.main)
+    singler$SingleR.single.main$clusters = SingleR.Cluster(SingleR.single.main,10)
     singler$SingleR.clusters.main = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres, quantile.use = 0.8,genes = variable.genes.main)
   }
   
   if (!(ref$name %in% c('Immgen','RNAseq','HPCA','Blueprint_Encode','Fantom','GSE43005'))) {
     singler$about$refernce = ref
   }
+  
   singler
 }
 
