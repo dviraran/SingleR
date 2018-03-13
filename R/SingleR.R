@@ -66,7 +66,7 @@ quantileMatrix = function(mat,groups,q) {
 #' @return the top labels for each single cell
 SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,fine.tune.thres,genes,sd.thres,mean_mat) {
   N = dim(sc_data)[2]
-  numCores = min(detectCores(all.tests = FALSE, logical = TRUE),16)
+  numCores = min(detectCores(all.tests = FALSE, logical = TRUE)-1,16)
   print(paste("Fine-tunning round on top cell types (using", numCores, "CPU cores):"))
   labels = pbmclapply(1:N,FUN=function(i){
     max_score = max(scores[i,])
@@ -489,7 +489,7 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL) {
   
   sc_data = as.matrix(sc_data)
   rownames(sc_data) = tolower(rownames(sc_data))
-  numClusters = min(detectCores(all.tests = FALSE, logical = TRUE),4)
+  numClusters = min(detectCores(all.tests = FALSE, logical = TRUE)-1,4)
   # break to groups of 1000 cells
   scores = matrix(NA,length(egc),ncol(sc_data))
   wind = seq(1,ncol(sc_data),by=1000)
@@ -559,6 +559,7 @@ SingleR.Subset = function(singler,subsetdata) {
     singler$singler[[i]]$SingleR.clusters$cell.names = singler$singler[[i]]$SingleR.clusters$cell.names[subsetdata]
     singler$singler[[i]]$SingleR.single$scores = singler$singler[[i]]$SingleR.single$scores[subsetdata,]
     singler$singler[[i]]$SingleR.single$labels = as.matrix(singler$singler[[i]]$SingleR.single$labels[subsetdata,])
+    singler$singler[[i]]$SingleR.single$labels1 = as.matrix(singler$singler[[i]]$SingleR.single$labels1[subsetdata,])
     
     if(!is.null(singler$singler[[i]]$SingleR.single.main)) {
       singler$singler[[i]]$SingleR.single.main$cell.names = singler$singler[[i]]$SingleR.single.main$cell.names[subsetdata]
@@ -566,7 +567,6 @@ SingleR.Subset = function(singler,subsetdata) {
       singler$singler[[i]]$SingleR.single.main$scores = singler$singler[[i]]$SingleR.single.main$scores[subsetdata,]
       singler$singler[[i]]$SingleR.single.main$labels = as.matrix(singler$singler[[i]]$SingleR.single.main$labels[subsetdata,])
       singler$singler[[i]]$SingleR.single.main$labels1 = as.matrix(singler$singler[[i]]$SingleR.single.main$labels1[subsetdata,])
-      
     }
   }
   if (!is.null(singler[["signatures"]])) {
@@ -584,6 +584,10 @@ SingleR.Subset = function(singler,subsetdata) {
     singler$seurat@cell.names = singler$seurat@cell.names[subsetdata]
   }
   
+  if (!is.null(singler$meta.data)) {
+    singler$meta.data$orig.ident = factor(as.character(singler$meta.data$orig.ident[subsetdata]))
+    singler$meta.data$xy = singler$meta.data$xy[subsetdata,]
+    }
   singler
 }
 
@@ -709,7 +713,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='H
     print(paste0('Annotating data with ',ref$name,' (Main types)...'))
     types = ref$main_types
     singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.8, genes = variable.genes.main)
-    singler$SingleR.single.main$clusters = SingleR.Cluster(SingleR.single.main,10)
+    singler$SingleR.single.main$clusters = SingleR.Cluster(singler$SingleR.single.main,10)
     singler$SingleR.clusters.main = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres, quantile.use = 0.8,genes = variable.genes.main)
   }
   
