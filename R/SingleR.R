@@ -174,7 +174,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
 #' @param sd.thres if genes=='sd' then this is the threshold for defining a variable gene.
 #'
 #' @return a list with the labels and scores
-SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL, genes = "sd", quantile.use = 0.8, p.threshold = 0.05, fine.tune = TRUE, fine.tune.thres = 0.05,sd.thres=1) {
+SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL, genes = "sd", quantile.use = 0.8, p.threshold = 0.05, fine.tune = TRUE, fine.tune.thres = 0.05,sd.thres=1, do.pvals = T) {
   rownames(ref_data) = tolower(rownames(ref_data))
   rownames(sc_data) = tolower(rownames(sc_data))
   A = intersect(rownames(ref_data),rownames(sc_data))
@@ -185,7 +185,9 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
     ref_data = ref_data[!not.use,]
     sc_data = sc_data[!not.use,]
   }
+  
   mat = medianMatrix(ref_data,types)
+
   if (typeof(genes)=='list') {
     utypes = unique(types)
     n = round(1000*(2/3)^(log2(c(ncol(mat)))))
@@ -224,7 +226,8 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
     return(0)
   }
   output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use)
-  output$pval = apply(output$scores, 1,function(x) chisq.out.test(x)$p.value)
+  if (do.pvals == T)
+    output$pval = apply(output$scores, 1,function(x) chisq.out.test(x)$p.value)
   
   # second round with top labels
   if (fine.tune==TRUE & length(unique(types)) > 2) {
@@ -232,11 +235,13 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
     output$labels1 = as.matrix(output$labels)
     output$labels = as.matrix(labels)
     output$labels1.thres = c(output$labels)
-    output$labels1.thres[output$pval>p.threshold] = "X"
+    if (do.pvals == T)
+      output$labels1.thres[output$pval>p.threshold] = "X"
   } else {
     labels = as.matrix(output$labels)
     output$labels.thres = c(output$labels)
-    output$labels.thres[output$pval>p.threshold] = "X"
+    if (do.pvals == T)
+      output$labels.thres[output$pval>p.threshold] = "X"
   }
   output$cell.names = cell.names
   output$quantile.use = quantile.use
@@ -280,7 +285,7 @@ SingleR.DrawScatter = function(sc_data, cell_id, ref,sample_id) {
 #' @param colors colors to use. Defualt is singler.colors
 #'
 #' @return a list with a ggplot and the scores for the single cell
-SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.order = 0.9, main_types=F, top.n=50, tit = NULL, colors=singler.colors) {
+SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.order = 0.8, main_types=F, top.n=50, tit = NULL, colors=singler.colors) {
   names(singler.colors) = levels(factor(ref$main_types))
   main_colors = singler.colors[levels(factor(ref$main_types))]
   sub_colors = singler.colors[unique(cbind(ref$main_types,ref$types))[,1]]
@@ -300,7 +305,7 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
     types.use = rep(TRUE,length(types))
   }
   
-  res = SingleR(sc_data=as.matrix(sc_data[,c(cell_id,cell_id)]),ref_data=ref$data[,types.use],types=types,fine.tune=F,sd.thre=ref$sd.thres)
+  res = SingleR(sc_data=as.matrix(sc_data[,c(cell_id,cell_id)]),ref_data=ref$data[,types.use],types=types,fine.tune=F,sd.thre=ref$sd.thres,do.pvals=F)
   if (is.null(top.n)) {
     top.n = length(unique(types))
   }
@@ -310,8 +315,8 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
   df$Types <- factor(df$Types, levels = levels(fac))
   
   p = ggplot(df, aes(x = Types, y = Spearman,  color = Types)) +
+    geom_boxplot(alpha = 0.2)+theme_classic() +
     geom_point(alpha = 0.5, position = "jitter",shape=16) +
-    geom_boxplot(alpha = 0, colour = "black")+theme_classic() +
     xlab('') + ggtitle(paste(colnames(sc_data)[cell_id])) +
     
     theme(legend.position="none"
@@ -407,6 +412,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
   df = data.frame(row.names = SingleR$cell.names)
   df$x = xy[,1]
   df$y = xy[,2]
+  
   if (SingleR$method == "cluster") {
     df$ident = clusters.map.values(clusters,labels)
     #df$ident <- getClusterLabels(clusters,labels)
@@ -418,7 +424,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
     lev = levels(df$ident)
     df$ident = factor(df$ident,levels = c(lev[-which(lev %in% 'Other')],'Other'))
   }
-  
+
   num.levels = length(levels(df$ident))
   if (num.levels<0)
     colors = getcol(c(1:length(unique(labels))))
@@ -552,43 +558,44 @@ SingleR.Cluster = function(SingleR,num.clusts=10) {
 #'
 #' @examples
 SingleR.Subset = function(singler,subsetdata) {
+  s = singler
   
-  
-  for (i in 1:length(singler$singler)) {
-    singler$singler[[i]]$SingleR.single$cell.names = singler$singler[[i]]$SingleR.single$cell.names[subsetdata]
-    singler$singler[[i]]$SingleR.clusters$cell.names = singler$singler[[i]]$SingleR.clusters$cell.names[subsetdata]
-    singler$singler[[i]]$SingleR.single$scores = singler$singler[[i]]$SingleR.single$scores[subsetdata,]
-    singler$singler[[i]]$SingleR.single$labels = as.matrix(singler$singler[[i]]$SingleR.single$labels[subsetdata,])
-    singler$singler[[i]]$SingleR.single$labels1 = as.matrix(singler$singler[[i]]$SingleR.single$labels1[subsetdata,])
+  if (!is.null(s$seurat)) {
+    s$seurat = SubsetData(s$seurat,colnames(s$seurat@data)[subsetdata])
+    subsetdata = unlist(lapply(s$seurat@cell.names,FUN=function(x) which(singler$singler[[1]]$SingleR.single$cell.names==x)))
+  }
+
+  for (i in 1:length(s$singler)) {
+    s$singler[[i]]$SingleR.single$cell.names = s$singler[[i]]$SingleR.single$cell.names[subsetdata]
+    s$singler[[i]]$SingleR.clusters$cell.names = s$singler[[i]]$SingleR.clusters$cell.names[subsetdata]
+    s$singler[[i]]$SingleR.single$scores = s$singler[[i]]$SingleR.single$scores[subsetdata,]
+    s$singler[[i]]$SingleR.single$labels = as.matrix(s$singler[[i]]$SingleR.single$labels[subsetdata,])
+    s$singler[[i]]$SingleR.single$labels1 = as.matrix(s$singler[[i]]$SingleR.single$labels1[subsetdata,])
+    s$singler[[i]]$SingleR.single$clusters$cl = s$singler[[i]]$SingleR.single$clusters$cl[subsetdata]
     
-    if(!is.null(singler$singler[[i]]$SingleR.single.main)) {
-      singler$singler[[i]]$SingleR.single.main$cell.names = singler$singler[[i]]$SingleR.single.main$cell.names[subsetdata]
-      singler$singler[[i]]$SingleR.clusters.main$cell.names = singler$singler[[i]]$SingleR.clusters.main$cell.names[subsetdata]
-      singler$singler[[i]]$SingleR.single.main$scores = singler$singler[[i]]$SingleR.single.main$scores[subsetdata,]
-      singler$singler[[i]]$SingleR.single.main$labels = as.matrix(singler$singler[[i]]$SingleR.single.main$labels[subsetdata,])
-      singler$singler[[i]]$SingleR.single.main$labels1 = as.matrix(singler$singler[[i]]$SingleR.single.main$labels1[subsetdata,])
+    if(!is.null(s$singler[[i]]$SingleR.single.main)) {
+      s$singler[[i]]$SingleR.single.main$cell.names = s$singler[[i]]$SingleR.single.main$cell.names[subsetdata]
+      s$singler[[i]]$SingleR.clusters.main$cell.names = s$singler[[i]]$SingleR.clusters.main$cell.names[subsetdata]
+      s$singler[[i]]$SingleR.single.main$scores = s$singler[[i]]$SingleR.single.main$scores[subsetdata,]
+      s$singler[[i]]$SingleR.single.main$labels = as.matrix(s$singler[[i]]$SingleR.single.main$labels[subsetdata,])
+      s$singler[[i]]$SingleR.single.main$labels1 = as.matrix(s$singler[[i]]$SingleR.single.main$labels1[subsetdata,])
+      s$singler[[i]]$SingleR.single.main$clusters$cl = s$singler[[i]]$SingleR.single.main$clusters$cl[subsetdata]
+      
     }
   }
-  if (!is.null(singler[["signatures"]])) {
-    singler$signatures = singler$signatures[subsetdata,]
+  if (!is.null(s[["signatures"]])) {
+    s$signatures = s$signatures[subsetdata,]
   }
-  if(!is.null(singler[['other']])) {
-    singler$other = singler$other[subsetdata,]
+  if(!is.null(s[['other']])) {
+    s$other = s$other[subsetdata,]
   }
-  
-  if (!is.null(singler$seurat)) {
-    singler$seurat@data = singler$seurat@data[,subsetdata]
-    singler$seurat@dr$tsne@cell.embeddings = singler$seurat@dr$tsne@cell.embeddings[subsetdata,]
-    singler$seurat@meta.data = subset(singler$seurat@meta.data,subsetdata)
-    singler$seurat@ident = singler$seurat@ident[subsetdata]
-    singler$seurat@cell.names = singler$seurat@cell.names[subsetdata]
+
+  if (!is.null(s$meta.data)) {
+    s$meta.data$orig.ident = factor(as.character(s$meta.data$orig.ident[subsetdata]))
+    s$meta.data$xy = s$meta.data$xy[subsetdata,]
+    s$meta.data$clusters = factor(as.character(s$meta.data$clusters[subsetdata]))
   }
-  
-  if (!is.null(singler$meta.data)) {
-    singler$meta.data$orig.ident = factor(as.character(singler$meta.data$orig.ident[subsetdata]))
-    singler$meta.data$xy = singler$meta.data$xy[subsetdata,]
-    }
-  singler
+  s
 }
 
 #' Remove data from a SingleR object to make it smaller
@@ -804,7 +811,7 @@ SingleR.CreateKangAnnotations = function(sc.data) {
 #' @param temp.dir used by the SingleR web app.
 #'
 #' @return a SingleR object containg a Seurat object
-CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',min.cells=2,regress.out='nUMI',npca=10,temp.dir=NULL) {
+CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',temp.dir=NULL) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))
@@ -912,7 +919,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
   
   singler$meta.data = list(project.name=project.name,orig.ident=orig.ident,clusters=sc@ident,xy=sc@dr$tsne@cell.embeddings)
   
-  singler = remove.Unnecessary.Data.single(singler)
+#  singler = remove.Unnecessary.Data.single(singler)
   
   singler
   
@@ -934,7 +941,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
 #' @param temp.dir
 #'
 #' @return a SingleR object
-CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,do.signatures=T,variable.genes='de',create.seurat=T,min.cells=2,regress.out='nUMI',npca=10,clusters=NULL,temp.dir=NULL) {
+CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,do.signatures=T,variable.genes='de',clusters=NULL,temp.dir=NULL) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))
@@ -1026,7 +1033,7 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,tech
   
   singler$meta.data = list(project.name=project.name,orig.ident=orig.ident)
   
-  singler = remove.Unnecessary.Data.single(singler)
+#  singler = remove.Unnecessary.Data.single(singler)
   
   singler
   

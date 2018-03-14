@@ -1,0 +1,199 @@
+---
+title: "Extended Data: Figures and Tables"
+output: 
+  pdf_document:
+    toc: true
+    fig_caption: true
+header-includes:
+    - \usepackage{caption}
+bibliography: Citations.bib
+---
+
+```{r setup, include=FALSE,warning=F}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(reshape2)
+library(RColorBrewer)
+library(ggplot2)
+library(Seurat)
+library(SingleR)
+library(grid)
+library(ggpubr)
+library(plyr)
+path.data = '~/Documents/SingleR/package/SingleR/manuscript_figures/FiguresData'
+```
+
+\captionsetup[table]{labelformat=empty}
+
+## Supplementary Figure 1
+
+```{r message=FALSE,warning=FALSE,echo=F}
+load(file.path(path.data,'GSE111664.RData'))
+p = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,singler$seurat@dr$tsne@cell.embeddings,labels=singler$seurat@meta.data$orig.ident,do.letters=F,colors=singler.colors,do.labels = F,dot.size=0.5,alpha=0.35)
+p$p
+```
+
+**Figure S1. 8,366 single-cells colored by batches.** This t-SNE plot accompanies Figure 1c. The colors are coded by batch. All batches intersect, suggesting that our data does not suffer from a strong batch effect. 
+
+## Supplementary Figure 2
+```{r message=FALSE,warning=FALSE,echo=F,fig.height=8.5,fig.width=7}
+knitr::opts_chunk$set(fig.height=8) 
+labels = singler$singler[[1]]$SingleR.single$labels
+n = table(labels)
+labels[labels %in% names(n)[n<15]]='*Others*'
+p = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,singler$seurat@dr$tsne@cell.embeddings,labels=labels,do.letters=T,colors=c('black',sample(singler.colors)),do.labels = F,dot.size=1.25,alpha=0.35,font.size = 5)
+p$p
+```
+
+**Figure S2. SingleR detailed annotations.** This heatmap accompanies Figure 1b. Here we present all SingleR annotations (not just main types). Interestingly, SingleR annoated the cells in the middle of macrophages cluster as alveolar macrophages extracted from a PPARG- mouse, opposed to the top cells which were annotated is the WT alveolar macrophages. To visualize the data, annotations with less than 20 cells were marked as *Others* and colored in black.
+
+## Supplementary Figure 3
+
+#### a
+\vspace*{-4mm}
+```{r message=FALSE,warning=FALSE,echo=F,fig.height=3.2}
+s = SingleR.Subset(singler,singler$seurat@ident %in% c(0,1,2,7))
+p = SingleR.DrawHeatmap(s$singler[[2]]$SingleR.single,top.n=50)
+```
+
+#### b
+\vspace*{-4mm}
+```{r message=FALSE,warning=FALSE,echo=F,fig.height=2.7}
+s5 = SingleR.Subset(singler,singler$seurat@ident %in% c(5))
+p = SingleR.DrawHeatmap(s5$singler[[2]]$SingleR.single,top.n=50)
+```
+
+**Figure S3. Heatmap of SingleR scores using lung reference datasets.** **a.** This heatmap accompanies Figure 1e. We use RNA-seq datasets as reference - lung macrophages from Gibbings et al. [-@Gibbings2017] (downloaded from GEO accession number GSE94135) and lung dendritic cells from Altboum et al. [-@Altboum2014] (downloaded from GEO accession number GSE49932). The two datasets were combined for a lung specific reference. We see that the majority of cells were clearly annotated to alveolar macrophages (AM), whereas the remaining were most correlated with IM3, which is CD11c+ interstitial macrophages, and not dendritic cells. Interestingly, the alveolar cluster was split to two clusters, as we show in Figure 2b. **b.** Cells from the dendritic cell cluster (see Figure 1d) are annotated as dendritic cells, showing that the annotations in (a) are not an artifact of the reference datasets.
+
+## Supplementary Figure 4
+```{r message=FALSE,warning=FALSE,echo=F}
+#p = SingleR.DrawHeatmap(s$singler[[1]]$SingleR.single,silent=T,top.n=Inf)
+#K = factor(cutree(p$tree_col,3))
+p = SingleR.Cluster(s$singler[[1]]$SingleR.single,3)
+K = p$cl
+K = plyr::mapvalues(K,from=1:3,to=c('C1','C2','C3'))
+```
+```{r message=FALSE,warning=FALSE,echo=F,fig.height=5}
+load(file.path(path.data,'decon.rds'))
+df = data.frame(x=s$seurat@dr$tsne@cell.embeddings[,1],
+                y=s$seurat@dr$tsne@cell.embeddings[,2],Cluster=K)
+df$Scale = decon$out.all[,1]
+df$PCA = prcomp(cbind(df$x,df$y))$x[,1]
+cl = brewer.pal(3,'Set1')
+pl = ggplot(df) + geom_point(aes(y=Scale,x=PCA,color=Scale),size=1.7,alpha=0.5)+
+  scale_color_gradient(low=cl[1],high=cl[2])+xlab('t-SNE ordering')+ylab('IM-AM similarity')+
+  geom_vline(xintercept = 0,linetype = "dashed",color='grey')+geom_vline(xintercept = 25,linetype = "dashed",color='grey')
+subplot = ggplot(df) + geom_boxplot(aes(y=Scale,x=Cluster,fill=Cluster),alpha=0.5)+xlab('')+theme(legend.position="none")
+vp <- viewport(width = 0.3, height = 0.45, x = 0.14,
+     y = 0.13, just = c("left",
+         "bottom"))
+full <- function() {
+     print(pl)
+     theme_set(theme_classic())
+     print(subplot, vp = vp)
+     theme_set(theme_classic())
+}
+full()
+```
+
+**Figure S4. Similarity analysis to alveolar and interstitial macrophages.** This plot accompanies Figure 2a. Similarity to alveolar macrophages (AM) and interstitial macrophages (IM) was quantified using a deconvolution approach. Using the DeconRNAseq package [@Gong2013], we measured in each single cell the enrichment of genes along a continuum between AM and IM gene sets derived from lung macrophage reference data (GSE94135 used for Figure 1e). Here, 0 represents similarity to IM and 1 similarity to AM, and a value of 0.5 suggests an intermediate state. In this plot we present the value of IM-AM similarity for each cell as a function of a one-dimension t-SNE plot (the horizontal axis here is the first PCA computed on tSNE1 and tSNE2 from the original tSNE plot). The insert shows a boxplot of the AM-IM scale by the clusters as defined in Figure 2b. The dashed lines roughly distinguish the cells of each cluster. We observe a linear change from high similarity to IM towards high similairy to AM, suggesting a gradient of differentiation along IM to AM (or vice versa).
+
+\newpage
+
+## Supplementary Figure 5
+
+\hspace{50pt}
+```{r message=FALSE,warning=FALSE,echo=F,fig.height=0.8,fig.width=3.25,eval=T}
+library(dendextend)
+dend = as.dendrogram(p$hc)
+d = cut(dend,h=1)$upper
+n = length(labels(d))
+labels(d) = rep('',n)
+par(mar=c(0,0,0,0))
+plot(d,axes=F)
+```
+
+\vspace*{-4mm}
+```{r message=FALSE,warning=FALSE,echo=F,fig.height=5,eval=T}
+SingleR.DrawHeatmap(s$singler[[1]]$SingleR.single,top.n=40,
+                    clusters=K,order.by.clusters = T)
+```
+
+
+**Figure S5. Clustering lung macrophages using SingleR scores.** This heatmap accompanies Figure 2b. Using the ImmGen reference datasets we cluster the cells with correlation scores produced by SingleR, thus generating a heatmap based on differential annotation. Cluster 1 is highly associated exclusively with ImmGen alveolar macrophages. Cluster 3 is mainly associated with non-alveolar myeloid transcriptomes (which were shown in lung reference datasets to be interstititial macrophages in Figure 1e and Supplementary Figure 3). Cluster 2 is associated with both alveolar and non-alveolar macrophage myeloid cells.
+
+\newpage
+
+## Supplementary Figure 6
+
+```{r message=FALSE,warning=FALSE,echo=F,fig.align='center',fig.width=6}
+include_graphics(file.path(path.data,'Supp_Fig_6.pdf'))
+```
+
+**Figure S6. Flow cytometric gating.** **a.** Cells were dissociated from lungs of WT mice 14 days after bleomycin injury and stained with SiglecF, CD11c and MHCII antibodies. SiglecF+CD11c+ cells were sorted into MHCII-high and MHC-low populations. Representative data are shown. **b.** Lung cells were dissociated from CX3CR1CreERT2 / ROsa26~loxP~STOP~loxP~-TdTomato mice induced with tamoxifen 1 day prior to and during bleomycin injury and stained with SiglecF and MHCII. Representative data are shown.
+
+\newpage
+
+## Supplementary Figure 7
+
+#### a
+\vspace*{-4mm}
+```{r message=FALSE,warning=FALSE,echo=F,fig.align='center',fig.height=3}
+include_graphics(file.path(path.data,'Supp_Fig_7.pdf'))
+```
+
+#### b
+\vspace*{-4mm}
+```{r message=FALSE,warning=FALSE,echo=F,fig.height=2.5,fig.width=4,fig.align='center',eval=T}
+df = read.table(file.path(path.data,'supp_fig7_data.txt'), header=TRUE, sep="\t", row.names=NULL, as.is=TRUE)
+df = melt(df)
+colnames(df) = c('Group','value')
+df$Group = mapvalues(factor(df$Group),from=c('CTRL','BLEO','BLEO.DTA'),to=c('Control','Bleomycin','Bleomycin+DTA'))
+ggplot(df,aes(x=Group,y=value,color=Group,fill=Group))+
+  geom_boxplot(alpha=0.2)+
+  geom_point(size=2,alpha=0.5,position=position_jitterdodge())+
+  theme(axis.title.x=element_blank(),legend.position="none",text = element_text(size=10))+
+  ylim(0,140)+
+  stat_compare_means(label.x.npc=0.4,label='p.format',comparisons=list(c('Control','Bleomycin'),c('Bleomycin','Bleomycin+DTA')))+ ylab('# of positive Mertk or SiglecF cells')
+```
+
+**Figure S7. Depletion of macrophage subpopulation during bleomycin fibrosis.** **a.** Fluorescence microscopy demonstrating diminished fibrotic scar, detected by 2-photon imaging of second harmonic (SH), and ablation of macrophages localized to scar by Mertk immunolabeling 21 days after bleomycin injury in tamoxifen-induced Cx3cr1CreERT2 x Rosa26~loxP~STOP~loxP~-Diptheria Toxin A mouse (right) compared with wild type control (left). **b.** Quantitation of total number of Mertk or SiglecF-expressing cells in 5 high power fields (n=3 mice per group). Wilcoxon rank sum test p-value is presented.
+
+\newpage
+
+## Supplementary Table 1
+
+```{r message=FALSE,warning=FALSE,echo=F}
+tbl.s1 <- read.csv(file.path(path.data,'table s1.csv'),header=TRUE, row.names=NULL, as.is=TRUE)
+colnames(tbl.s1) = c('Set name,','Seq. Platform','Read length','Num. reads','Num. alinged reads','Num. cells','Num. >500 genes')
+kable(tbl.s1,caption='Table S1. Drop-seq batches.')
+```
+
+\newpage
+
+## Supplementary Table 2
+
+```{r message=FALSE,warning=FALSE,echo=F}
+s$seurat@ident = K
+markers <- FindMarkers(object = s$seurat, ident.1 = 'C1',ident.2 = 'C3', min.pct = 0.33,logfc.threshold = 1)
+markers$p_val = as.character(markers$p_val)
+markers$p_val[markers$p_val==0] = '<1e-300'
+markers$p_val_adj[markers$p_val_adj==0] = '<1e-300'
+colnames(markers) = c('P-value','Log 2FC','% of C1','% of C3','Adj. P-value')
+kable(markers,caption='Table S2. Differentially expressed genes between C1 and C3.')
+```
+
+\newpage
+
+## Supplementary Table 3
+
+```{r message=FALSE,warning=FALSE,echo=F}
+tbl.s3 <- read.csv(file.path(path.data,'table_s3.csv'),header=TRUE, row.names=NULL, as.is=TRUE)
+colnames(tbl.s1) = c('Mouse C1 genes','Human C1 genes')
+kable(tbl.s3,caption='Table S3. Mouse and Human orthologs of C1 genes',row.names=F)
+```
+
+\newpage
+
+## References
+
