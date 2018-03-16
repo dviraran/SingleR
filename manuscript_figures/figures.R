@@ -6,8 +6,8 @@ library(ggplot2)
 library(ggpubr)
 require("biomaRt")
 
-path.data = '~/Documents/SingleR/FiguresData'
-path.out = '~/Documents/SingleR/FiguresOut'
+path.data = '~/Documents/SingleR/package/SingleR/manuscript_figures/FiguresData/'
+path.out = '~/Documents/SingleR/package/SingleR/manuscript_figures/FiguresOut'
 
 gg_color_hue <- function(n) {
   hues = seq(15, 375, length = n + 1)
@@ -167,7 +167,6 @@ K = p$cl
 K = plyr::mapvalues(K,from=1:3,to=c('C1','C2','C3'))
 
 singler.macs$seurat@ident = K
-ggplot(df) + geom_point(aes(x=x, y=y,color=K),size=0.7)+theme_void()+theme(legend.position="none")
 
 pdf(file.path(path.out,'Fig2b.pdf'),width=3,height=3)
 ggplot(df) + geom_point(aes(x=x, y=y,color=K),size=0.7)+theme_void()+theme(legend.position="none")
@@ -211,10 +210,10 @@ d[d>2] = 2;d[d< -2]=-2
 
 num.genes = rbind(colSums(am>0)/nrow(am),colSums(im>0)/nrow(im))
 
-pdf(file.path(path.out,'Fig2c.pdf'),width=6,height=4)
+pdf(file.path(path.out,'Fig2c.pdf'),width=6.5,height=5.45)
 pheatmap(d[,order(annotation_col$Cluster,num.genes[2,]-num.genes[1,])],
          annotation_col=annotation_col,annotation_colors=annotation_colors,cluster_cols=F,
-         cluster_rows=F,show_colnames=F,border_color=NA,fontsize=7)
+         cluster_rows=F,show_colnames=F,border_color=NA,fontsize=9)
 dev.off()
 
 ### Figure 2d - expressed genes
@@ -226,11 +225,11 @@ for (i in seq(0,0.85,by=0.01)) {
 }
 colnames(res) = c('C1','C2','C3')
 f = melt(res)
-
-pdf(file.path(path.out,'Fig2d.pdf'),width=2.5,height=2)
-ggplot(f)+geom_smooth(aes(x=X1,y=f$value*100,color=X2))+ylab('% of cells')+
+f$value = f$value*100
+pdf(file.path(path.out,'Fig2d.pdf'),width=4,height=4)
+ggplot(f)+geom_smooth(aes(x=X1,y=value,color=X2),size=2)+ylab('% of cells')+
   xlab('% of expressed genes from C1 & C3')+
-  theme(text = element_text(size=7),axis.text.x = element_text(size=7),axis.text.y = element_text(size=7))
+  theme(text = element_text(size=12),axis.text.x = element_text(size=12),axis.text.y = element_text(size=12))
 dev.off()
 
 df = data.frame(x=singler.macs$meta.data$xy[,1],y=singler.macs$meta.data$xy[,2])
@@ -238,7 +237,7 @@ for (i in 1:nrow(markers)) {
   df$Scale = as.matrix(singler.macs$seurat@data[rownames(markers)[i],])
   ggplot(df) + geom_point(aes(x=x, y=y,color=Scale),size=0.3,alpha=0.5)+
     scale_color_gradient(low='gray',high='darkblue')+ggtitle(rownames(markers)[i])+theme_void()+
-    theme(title =element_text(size=1, face='bold'))
+    theme(title =element_text(size=10, face='bold'),plot.title = element_text(hjust = 0.5,vjust=-0.5))
   ggsave(file.path(path.out,paste0('Fig2d_',rownames(markers)[i],'.pdf')),width=2,height=2)
 }
 
@@ -269,26 +268,84 @@ pheatmap(m,scale='row',cluster_cols = F,annotation_col=annotation_col,show_colna
 dev.off()
 
 ### Figure 2f - time course 
-pdf(file.path(path.out,'Fig2f.pdf'),width=7.5,height=2.5)
+CreateContour = function(file) { 
+  a <- as.matrix(read.csv(file, header=TRUE, row.names=NULL, as.is=TRUE))
+  df = data.frame(x=(a[,2]),y=(a[,1]))
+  
+  x <- log10(df[,1])
+  y <- log10(df[,2])
+  print(file)
+  print(length(x))
+  print(mean(x<log10(5200) & y>log10(310)))
+  print(mean(x<log10(5200) & y<log10(310)))
+  print(mean(x>log10(5200) & y>log10(310)))
+  print(mean(x>log10(5200) & y<log10(310)))
+  
+  xax <- list(
+    title = "",
+    zeroline = FALSE,
+    showline = FALSE,
+    #showticklabels = FALSE,
+    showgrid = FALSE,
+    range = c(2,5.3)
+  )
+  yax <- list(
+    title = "",
+    zeroline = FALSE,
+    showline = FALSE,
+    #showticklabels = FALSE,
+    showgrid = FALSE,
+    range = c(1,3.7)
+  )
+  
+  outliers = smoothScatter(log10(df),ret.selection=T,nrpoints=round(nrow(df)/10))
+  plot_ly(x = x, y = y) %>% 
+    add_histogram2dcontour(autocolorscale=T,showlegend=F,bgcolor=rgb(0,0,0),
+                           contours = list(coloring='heatmap',end = 85, size = 10, start = 10)) %>%
+    add_markers(x = x[outliers], y = y[outliers], marker=list(size=2), color=I("black"), 
+                opacity=.5) %>%
+    layout(xaxis = xax, yaxis = yax,
+           showlegend=FALSE,
+           shapes=list(list(type='line', x0 = log10(5200), x1=log10(5200), y0=0.1, y1=4, line=list(dash='dot', width=1)),
+                       list(type='line', x0 = 0.7, x1=5.6, y0=log10(310), y1=log10(310), line=list(dash='dot', width=1))))
+  
+}
+
+p1 = CreateContour(file.path(path.data,'export_0-1_Data Source - 1_tdTomato-A subset_APC-Cy7-A, APC-A subset.csv'))
+export(p1, file = file.path(path.out,'Fig2f_0days.pdf'))
+p2 = CreateContour(file.path(path.data,'export_7-1_Data Source - 1_tdTomato-A subset_APC-Cy7-A, APC-A subset.csv'))
+export(p2, file = file.path(path.out,'Fig2f_7days.pdf'))
+p3 = CreateContour(file.path(path.data,'export_14-1_Data Source - 1_tdTomato-A subset_APC-Cy7-A, APC-A subset.csv'))
+export(p3, file = file.path(path.out,'Fig2f_14days.pdf'))
+
 df = read.table(file.path(path.data,'cx3 timecourse flow data.txt'), header=TRUE, sep="\t", row.names=NULL, as.is=TRUE)
 df$Days = factor(df$Days,levels=c('0 days','7 days','14 days'))
+pdf(file.path(path.out,'Fig2f.pdf'),width=6,height=1.2)
 ggplot(df,aes(x=Days,y=Value,color=Days,fill=Days))+
-  geom_boxplot(alpha=0.2)+
-  geom_point(size=4,alpha=0.5,position=position_jitterdodge())+
-  facet_wrap(~Measurement,nrow=1,scales = "free")+
+  #geom_boxplot(alpha=0.2,stat='median')+
+  geom_point(size=2.5,alpha=0.5,position=position_jitterdodge())+
+  stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean,
+               geom = "crossbar", width = 0.5)+
+  facet_wrap(~Measurement,nrow=1,scales = "free", strip.position = "left")  +
+  ylab(NULL)+
   expand_limits(y = 0)+
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank())
+        axis.ticks.x=element_blank()) +
+  theme(strip.background = element_blank(),
+        strip.placement = "outside")
 dev.off()
 
 ### Figure 3a = pdgfa
-pdf(file.path(path.out,'Fig3a.pdf'),width=4,height=3)
+pdf(file.path(path.out,'Fig3a.pdf'),width=3.5,height=2.62)
 df = data.frame(Pdgfa = t(M['Pdgfa',c(13,14,2,4,6,1,3,5,8,10,12,7,9,11)]), Group = annotation_col$Group)
 df$Group = factor(df$Group,levels=c('Baseline','2 wk MHC lo','2 wk MHC high','4 wk MHC lo','4 wk MHC high'))
 ggplot(df,aes(x=Group,y=Pdgfa,color=Group,fill=Group))+
-  geom_boxplot(alpha=0.2)+
+  #geom_boxplot(alpha=0.2)+
   geom_point(size=3,alpha=0.5,position=position_jitterdodge())+
+  stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean,
+               geom = "crossbar", width = 0.5)+
+  stat_compare_means(label.x.npc=0.4,label='p.signif',comparisons=list(c('2 wk MHC lo','2 wk MHC high')))+
   theme(axis.title.x=element_blank())+theme(legend.position="none")+
   ylab('Pdgfa normalized expression')
 dev.off()
