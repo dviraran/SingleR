@@ -20,6 +20,7 @@ library(SingleR)
 library(grid)
 library(ggpubr)
 library(plyr)
+
 ```
 
 \captionsetup[table]{labelformat=empty}
@@ -125,7 +126,7 @@ SingleR.DrawHeatmap(s$singler[[1]]$SingleR.single,top.n=40,
 
 ## Supplementary Figure 6
 
-```{r message=FALSE,warning=FALSE,echo=F,fig.align='center',fig.width=6}
+```{r message=FALSE,warning=FALSE,echo=F,fig.align='center',fig.width=5}
 include_graphics('~/Documents/SingleR/manuscript/Supp_Fig_6.pdf')
 ```
 
@@ -145,15 +146,15 @@ include_graphics('~/Documents/SingleR/manuscript/Supp_Fig_7.pdf')
 \vspace*{-4mm}
 ```{r message=FALSE,warning=FALSE,echo=F,fig.height=2.5,fig.width=4,fig.align='center',eval=T}
 df = read.table('~/Documents/SingleR/supp_fig7_data.txt', header=TRUE, sep="\t", row.names=NULL, as.is=TRUE)
-df = melt(df)
+df = reshape2::melt(df)
 colnames(df) = c('Group','value')
-df$Group = mapvalues(factor(df$Group),from=c('CTRL','BLEO','BLEO.DTA'),to=c('Control','Bleomycin','Bleomycin+DTA'))
+df$Group = plyr::mapvalues(factor(df$Group),from=c('CTRL','BLEO','BLEO.DTA'),to=c('Control','Bleomycin','Bleomycin+DTA'))
 ggplot(df,aes(x=Group,y=value,color=Group,fill=Group))+
   geom_boxplot(alpha=0.2)+
   geom_point(size=2,alpha=0.5,position=position_jitterdodge())+
   theme(axis.title.x=element_blank(),legend.position="none",text = element_text(size=10))+
   ylim(0,140)+
-  stat_compare_means(label.x.npc=0.4,label='p.format',comparisons=list(c('Control','Bleomycin'),c('Bleomycin','Bleomycin+DTA')))+ ylab('# of positive Mertk or SiglecF cells')
+  stat_compare_means(label.x.npc=0.4,label='p.format',comparisons=list(c('Control','Bleomycin'),c('Bleomycin','Bleomycin+DTA')))+ ylab('# of Mertk+ or SiglecF+\n cells per field of view')
 ```
 
 **Figure S7. Depletion of macrophage subpopulation during bleomycin fibrosis.** **a.** Fluorescence microscopy demonstrating diminished fibrotic scar, detected by 2-photon imaging of second harmonic (SH), and ablation of macrophages localized to scar by Mertk immunolabeling 21 days after bleomycin injury in tamoxifen-induced Cx3cr1CreERT2 x Rosa26~loxP~STOP~loxP~-Diptheria Toxin A mouse (right) compared with wild type control (left). **b.** Quantitation of total number of Mertk or SiglecF-expressing cells in 5 high power fields (n=3 mice per group). Wilcoxon rank sum test p-value is presented.

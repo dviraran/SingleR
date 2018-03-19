@@ -5,7 +5,7 @@
 \title{Plot boxplots for each lablel for a given single cell.}
 \usage{
 SingleR.DrawBoxPlot(sc_data, cell_id, ref, labels.use = NULL,
-  quantile.order = 0.9, main_types = F, top.n = 50, tit = NULL,
+  quantile.order = 0.8, main_types = F, top.n = 50, tit = NULL,
   colors = singler.colors)
 }
 \arguments{

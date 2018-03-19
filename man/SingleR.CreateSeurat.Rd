@@ -4,12 +4,28 @@
 \alias{SingleR.CreateSeurat}
 \title{Wrapper function to create a Seurat object}
 \usage{
-SingleR.CreateSeurat(project, sc.data, min.genes = 500, min.cells = 2,
-  regress.out = "nUMI", npca = 10, resolution = 0.8, species = "Human",
-  temp.dir = NULL)
+SingleR.CreateSeurat(project.name, sc.data, min.genes = 500, min.cells = 2,
+  regress.out = "nUMI", npca = 10, resolution = 0.8, temp.dir = NULL)
 }
 \arguments{
-\item{temp.dir}{}
+\item{project.name}{the project name}
+
+\item{sc.data}{a matrix of single cell expression data}
+
+\item{min.genes}{Include cells where at least this many genes are detected.}
+
+\item{min.cells}{include genes with detected expression in at least this many cells. Will subset the raw.data matrix as well. To reintroduce excluded genes, create a new object with a lower cutoff.}
+
+\item{regress.out}{variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.}
+
+\item{npca}{a vector of the dimensions to use in construction of the clustering and tSNE plot}
+
+\item{resolution}{clustering resolution. See Seurat manual for more details.}
+
+\item{temp.dir}{used by FindClusters function.}
+}
+\value{
+a Seurat object
 }
 \description{
 Wrapper function to create a Seurat object

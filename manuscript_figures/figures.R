@@ -79,7 +79,7 @@ dev.off()
 
 ### Figure 1c - Case/Control of lung sc data
 
-load(file.path(path,'GSE111664.RData'))
+load(file.path(path.data,'GSE111664.RData'))
 singler.macs = SingleR.Subset(singler,singler$seurat@ident %in% c(0,1,2,7))
 
 full.cond = as.character(singler$meta.data$orig.ident)
@@ -143,7 +143,7 @@ library(RColorBrewer)
 # create decon data
 load(file.path(path.data,'GSE94135_GSE49932.RData'))
 amim = cbind(rowMeans(gse94135_gse49932$data[,1:3]),rowMeans(gse94135_gse49932$data[,10:12]))
-#load('~/Documents/singler/macs_expr.rds')
+expr = singler.macs$seurat@data
 decon = DeconRNASeq(as.data.frame(as.matrix(expr)),as.data.frame(amim),checksig=FALSE,known.prop = FALSE)
 
 #load('~/Documents/singler/decon.rds')
@@ -378,7 +378,31 @@ ggplot(df,aes(x=Group,y=Value,color=Group,fill=Group))+
   stat_compare_means(label.x.npc=0.4,label='p.signif',comparisons=list(c('Control','Bleomycin'),c('Bleomycin','CX3CR1 Bleomycin')))
 dev.off()
 
-### Figure 3e - human samples
+### Figure 3d - human ihc ipf
+df = read.table(file.path(path.data,'quant_ihc_ipf.txt'), header=TRUE, sep="\t", row.names=NULL, as.is=TRUE)
+df = melt(df)
+df$Group= rep('Control',nrow(df))
+df$Group[grepl('Fibrosis',df$variable)]= 'Fibrosis'
+
+pdf(file.path(path.out,'Fig3d.pdf'),width=2,height=2.8)
+ggplot(df,aes(x=variable,y=value,color=variable))+
+  geom_boxplot(alpha=0.2)+
+  scale_color_manual(values=c("#E69F00","#E69F00","#E69F00","#56B4E9","#56B4E9","#56B4E9"))+
+  geom_point(aes(color=variable,fill=variable),size=2,alpha=0.5,position=position_jitterdodge())+
+  scale_color_manual(values=c("#E69F00","#E69F00","#E69F00","#56B4E9","#56B4E9","#56B4E9"))+
+  theme(axis.title.x=element_blank())+theme(legend.position="none")+theme_classic() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  ylab('% of Mafb+ cells in a field of view\n(among cd68+ cells)')+
+  theme(legend.position="none")
+dev.off()
+
+
+
+### Figure 3e - human gsea ipf
+library(GSEABase)
+library(GSVA)
 expr <- as.matrix(read.table(file.path(path.data,'GSE32537_expr.txt'), header=TRUE, sep="\t", row.names=1, as.is=TRUE,comment.char='!'))
 colnames(expr) = unlist(lapply(colnames(expr),FUN=function(x) strsplit(x,'_')[[1]][1]))
 clinical = as.matrix(read.table(file.path(path.data,'GSE32537_clinical.txt'), header=TRUE, sep="\t", row.names=1, as.is=TRUE,comment.char='!'))
@@ -414,13 +438,18 @@ colnames(df) <- gsub("\\.", " ", colnames(df))
 colnames(df)
 d = melt(df,variable.name='Group')
 colnames(d) = c('Group','Set','Score')
-pdf(file.path(path.data,'Fig3e.pdf'),width=8,height=4)
-ggplot(d,aes(x=Group,y=Score,color=Group,fill=Group))+geom_boxplot(alpha=0.2)+
+pdf(file.path(path.out,'Fig3e.pdf'),width=4.5,height=3.5)
+ggplot(d,aes(x=Group,y=Score,color=Group,fill=Group))+geom_boxplot(alpha=0.2,outlier.shape = NA)+
   geom_point(size=0.5,alpha=0.5,position=position_jitterdodge())+
   facet_wrap(~Set,nrow=1)+ 
   stat_compare_means(label.x.npc=0.4,size=8,label='p.signif')+
   ylab('Scaled values')+xlab("")+
   theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),axis.ticks.x=element_blank())
+        axis.text.x=element_blank(),axis.ticks.x=element_blank())+ theme(legend.position="none")
+dev.off()
+
+pdf(file.path(path.out,'Fig3e_legend.pdf'),width=4.5,height=3.8)
+ggplot(d,aes(x=Group,y=Score,color=Group,fill=Group))+geom_boxplot(alpha=0.2)+
+  theme(legend.position="bottom")
 dev.off()
 

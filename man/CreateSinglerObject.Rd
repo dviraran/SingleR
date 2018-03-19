@@ -6,10 +6,8 @@
 \usage{
 CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
   technology = "10X", species = "Human", citation = "",
-  ref.list = list(), reduce.file.size = T, normalize.gene.length = F,
-  do.signatures = T, variable.genes = "de", create.seurat = T,
-  min.cells = 2, regress.out = "nUMI", npca = 10, clusters = NULL,
-  temp.dir = NULL)
+  ref.list = list(), normalize.gene.length = F, variable.genes = "de",
+  fine.tune = T, do.signatures = T, clusters = NULL, temp.dir = NULL)
 }
 \arguments{
 \item{counts}{a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.}
@@ -29,6 +27,10 @@ CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
 \item{ref.list}{a list of reference objects. If NULL uses the predefined reference objects - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode.}
 
 \item{normalize.gene.length}{if a full-length method set to TRUE, if a 3' method set to FALSE.}
+
+\item{variable.genes}{variable gene method to use - 'sd' or 'de'. Defualt is 'de'.}
+
+\item{fine.tune}{perform fine tuning. Defualt is TRUE. Fine-tuning may take long to run.}
 
 \item{do.signatures}{create signatures data}
 

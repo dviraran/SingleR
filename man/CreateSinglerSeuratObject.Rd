@@ -6,9 +6,10 @@
 \usage{
 CreateSinglerSeuratObject(counts, annot = NULL, project.name,
   min.genes = 500, technology = "10X", species = "Human", citation = "",
-  ref.list = list(), reduce.file.size = T, normalize.gene.length = F,
-  do.signatures = T, variable.genes = "de", min.cells = 2,
-  regress.out = "nUMI", npca = 10, clusters = NULL, temp.dir = NULL)
+  ref.list = list(), normalize.gene.length = F, variable.genes = "de",
+  fine.tune = T, reduce.file.size = T, do.signatures = T, min.cells = 2,
+  npca = 10, regress.out = "nUMI", reduce.seurat.object = T,
+  temp.dir = NULL)
 }
 \arguments{
 \item{counts}{a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.}
@@ -29,17 +30,21 @@ CreateSinglerSeuratObject(counts, annot = NULL, project.name,
 
 \item{normalize.gene.length}{if a full-length method set to TRUE, if a 3' method set to FALSE.}
 
+\item{variable.genes}{variable gene method to use - 'sd' or 'de'. Defualt is 'de'.}
+
+\item{fine.tune}{perform fine tuning. Defualt is TRUE. Fine-tuning may take long to run.}
+
 \item{do.signatures}{create signatures data}
 
 \item{min.cells}{include genes with detected expression in at least this many cells. Will subset the raw.data matrix as well. To reintroduce excluded genes, create a new object with a lower cutoff.}
 
-\item{regress.out}{variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.}
-
 \item{npca}{a vector of the dimensions to use in construction of the clustering and tSNE plot}
 
-\item{temp.dir}{used by the SingleR web app.}
+\item{regress.out}{variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.}
 
 \item{reduce.seurat.object}{if TRUE removes the raw data and other high memory objects from the Seurat object.}
+
+\item{temp.dir}{used by the SingleR web app.}
 }
 \value{
 a SingleR object containg a Seurat object

@@ -548,15 +548,12 @@ SingleR.Cluster = function(SingleR,num.clusts=10) {
   list(hc=hc,cl=factor(cl))
 }
 
-#' Subseting a SingleR object
+#' Subseting a SingleR object. This function subsets all the SingleR data and the Seurat object if included.
 #'
 #' @param singler as SingleR object
-#' @param subsetdata
+#' @param subsetdata a logical vector of single-cells to include in the subseted object
 #'
-#' @return
-#' @export
-#'
-#' @examples
+#' @return a subset of the original SingleR vector
 SingleR.Subset = function(singler,subsetdata) {
   s = singler
   
@@ -669,19 +666,24 @@ CreateVariableGeneSet = function(ref_data,types,n) {
 
 #' Wrapper function to create a SingleR object
 #'
-#' @param sc.data
-#' @param ref
-#' @param clusters
-#' @param do.main.types
-#' @param species
-#' @param citation
-#' @param technology
+#' @param sc.data a matrix of single cell expression data
+#' @param ref a reference set object. 
+#' This object must be a list contianig: data - log2 normalized expression data;
+#' types - annotations for each of the samples; 
+#' main_types - annotations for each of the samples, but less detailed; 
+#' name - name for the reference set; 
+#' sd.thres - a threshold for sd (used in 'sd' mode); 
+#' de.genes - lists of lists of differentially expressed genes. Can be created using the CreateVariableGeneSet function.
+#' de.genes.main - lists of lists of differentially expressed genes. Can be created using the CreateVariableGeneSet function.
+#' @param clusters a numberic vector of cluster ids for each single cell. If NULL uses SingleR clustering.
+#' @param do.main.types if TRUE runs a main cell type annotation using the main_types annotation.
+#' @param species The species of the sample ('Human' or 'Mouse').
+#' @param citation a citation for the project.
+#' @param variable.genes variable gene method to use - 'sd' or 'de'. Defualt is 'de'.
+#' @param fine.tune perform fine tuning. Defualt is TRUE. Fine-tuning may take long to run.
 #'
-#' @return
-#' @export
-#'
-#' @examples
-SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='Human',citation='-',technology='-',variable.genes='sd') {
+#' @return a SingleR object object
+SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,do.main.types=T,species='Human',citation='-',technology='-',variable.genes='sd', fine.tune=T) {
   
   types = ref$types
   
@@ -733,22 +735,18 @@ SingleR.CreateObject <- function(sc.data,ref,clusters,do.main.types=T,species='H
 
 #' Wrapper function to create a Seurat object
 #'
-#' @param project
-#' @param sc.data
-#' @param min.genes
-#' @param min.cells
-#' @param regress.out
-#' @param npca
-#' @param resolution
-#' @param species
-#' @param temp.dir
+#' @param project.name the project name
+#' @param sc.data a matrix of single cell expression data
+#' @param min.genes Include cells where at least this many genes are detected.
+#' @param min.cells include genes with detected expression in at least this many cells. Will subset the raw.data matrix as well. To reintroduce excluded genes, create a new object with a lower cutoff.
+#' @param regress.out variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.
+#' @param npca a vector of the dimensions to use in construction of the clustering and tSNE plot
+#' @param resolution clustering resolution. See Seurat manual for more details.
+#' @param temp.dir used by FindClusters function.
 #'
-#' @return
-#' @export
-#'
-#' @examples
-SingleR.CreateSeurat <- function(project,sc.data,min.genes = 500,min.cells = 2,regress.out = 'nUMI',npca = 10,resolution=0.8,species='Human',temp.dir=NULL) {
-  sc = CreateSeuratObject(raw.data = sc.data, min.cells = min.cells, min.genes = min.genes, project = project)
+#' @return a Seurat object
+SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 500,min.cells = 2,regress.out = 'nUMI',npca = 10,resolution=0.8,temp.dir=NULL) {
+  sc = CreateSeuratObject(raw.data = sc.data, min.cells = min.cells, min.genes = min.genes, project = project.name)
   if (species == 'Human') {
     mtgenes = '^MT-'
     
@@ -758,8 +756,7 @@ SingleR.CreateSeurat <- function(project,sc.data,min.genes = 500,min.cells = 2,r
   mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), value = TRUE)
   percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
   sc <- AddMetaData(object = sc, metadata = percent.mito, col.name = "percent.mito")
-  #sc <- FilterCells(object = sc, subset.names = c("nGene", "percent.mito"), low.thresholds = c(200, -Inf), high.thresholds = c(2500, 0.05))
-  
+
   sc <- NormalizeData(object = sc, normalization.method = "LogNormalize", scale.factor = 10000)
   sc <- FindVariableGenes(object = sc, mean.function = ExpMean, dispersion.function = LogVMR, x.low.cutoff = 0.0125, x.high.cutoff = 3, y.cutoff = 0.5, do.contour = F, do.plot = F)
   
@@ -779,6 +776,11 @@ SingleR.CreateSeurat <- function(project,sc.data,min.genes = 500,min.cells = 2,r
   sc
 }
 
+#' Run annotation based on Kang et al. Nature Biotechnology 2017.
+#'
+#' @param sc.data a matrix of single cell expression data.
+#'
+#' @return list of the correlation matrix and the annotations.
 SingleR.CreateKangAnnotations = function(sc.data) {
   if (!exists('cell.type.classification'))
     data('cell.type.cor.classification')
@@ -803,6 +805,8 @@ SingleR.CreateKangAnnotations = function(sc.data) {
 #' @param citation a citation for the project
 #' @param ref.list a list of reference objects. If NULL uses the predefined reference objects - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode. 
 #' @param normalize.gene.length if a full-length method set to TRUE, if a 3' method set to FALSE.
+#' @param variable.genes variable gene method to use - 'sd' or 'de'. Defualt is 'de'.
+#' @param fine.tune perform fine tuning. Defualt is TRUE. Fine-tuning may take long to run.
 #' @param do.signatures create signatures data
 #' @param min.cells include genes with detected expression in at least this many cells. Will subset the raw.data matrix as well. To reintroduce excluded genes, create a new object with a lower cutoff.
 #' @param regress.out variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.
@@ -811,7 +815,7 @@ SingleR.CreateKangAnnotations = function(sc.data) {
 #' @param temp.dir used by the SingleR web app.
 #'
 #' @return a SingleR object containg a Seurat object
-CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),reduce.file.size=T,normalize.gene.length=F,do.signatures=T,variable.genes='de',temp.dir=NULL) {
+CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,variable.genes='de',fine.tune=T,reduce.file.size=T,do.signatures=T,min.cells=2,npca=10,regress.out='nUMI',reduce.seurat.object=T,temp.dir=NULL) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))
@@ -860,7 +864,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
   
   clusters = sc@ident
   
-  if(reduce.file.size==T) {
+  if(reduce.seurat.object==T) {
     sc@raw.data = c()
     sc@scale.data = c()
     sc@calc.params = list()
@@ -887,20 +891,20 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
         data('Immgen')
       if (!exists('mouse.rnaseq'))
         data('Mouse-RNAseq')
-      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes),
-                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
+      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
       )
     } else if (species == 'Human') {
       if(!exists('hpca'))
         data ('HPCA')
       if (!exists('blueprint_encode'))
         data('Blueprint_Encode')
-      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes),
-                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes))
+      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune))
     }
   } else {
     res = lapply(ref.list, FUN=function(x) {
-      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
+      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
     })
   }
   
@@ -936,12 +940,14 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
 #' @param citation a citation for the project
 #' @param ref.list a list of reference objects. If NULL uses the predefined reference objects - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode. 
 #' @param normalize.gene.length if a full-length method set to TRUE, if a 3' method set to FALSE.
+#' @param variable.genes variable gene method to use - 'sd' or 'de'. Defualt is 'de'.
+#' @param fine.tune perform fine tuning. Defualt is TRUE. Fine-tuning may take long to run.
 #' @param do.signatures create signatures data
 #' @param clusters input cluster id for each of the cells with at least min.genes, if NULL uses SingleR clusterings.
 #' @param temp.dir
 #'
 #' @return a SingleR object
-CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,do.signatures=T,variable.genes='de',clusters=NULL,temp.dir=NULL) {
+CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,variable.genes='de',fine.tune=T,do.signatures=T,clusters=NULL,temp.dir=NULL) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))

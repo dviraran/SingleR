@@ -2,15 +2,18 @@
 % Please edit documentation in R/SingleR.R
 \name{SingleR.Subset}
 \alias{SingleR.Subset}
-\title{Subseting a SingleR object}
+\title{Subseting a SingleR object. This function subsets all the SingleR data and the Seurat object if included.}
 \usage{
 SingleR.Subset(singler, subsetdata)
 }
 \arguments{
 \item{singler}{as SingleR object}
 
-\item{subsetdata}{}
+\item{subsetdata}{a logical vector of single-cells to include in the subseted object}
+}
+\value{
+a subset of the original SingleR vector
 }
 \description{
-Subseting a SingleR object
+Subseting a SingleR object. This function subsets all the SingleR data and the Seurat object if included.
 }
