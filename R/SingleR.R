@@ -434,7 +434,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
   p = p + geom_point(aes(color=ident), size=dot.size,alpha=alpha)
   
   if( do.letters == TRUE) {
-    p = p + geom_point(aes(shape=as.character(ident)), size=dot.size/2)
+    p = p + geom_point(aes(shape=as.character(ident),text=ident), size=dot.size/2)
     p = p + scale_shape_identity()
   } else {
   }
@@ -470,6 +470,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
                 panel.grid.minor = element_blank(),
                 panel.background = element_blank(), 
                 axis.line = element_line(colour = "black"))
+
   out = list(p=p,df=df,num.levels=num.levels)
   
 }
@@ -584,7 +585,7 @@ SingleR.Subset = function(singler,subsetdata) {
     s$signatures = s$signatures[subsetdata,]
   }
   if(!is.null(s[['other']])) {
-    s$other = s$other[subsetdata,]
+    s$other = s$other[subsetdata]
   }
 
   if (!is.null(s$meta.data)) {
@@ -703,7 +704,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,do.main.types=T,speci
     variable.genes.main = variable.genes
   }
   
-  SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres,genes = variable.genes)
+  SingleR.single = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres,genes = variable.genes,fine.tune = fine.tune)
   
   SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
   
@@ -711,7 +712,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,do.main.types=T,speci
     clusters = SingleR.single$clusters$cl
   }
   
-  SingleR.clusters = SingleR("cluster",sc.data,ref$data,types=types, clusters = factor(clusters),sd.thres = ref$sd.thres,genes = variable.genes)
+  SingleR.clusters = SingleR("cluster",sc.data,ref$data,types=types, clusters = factor(clusters),sd.thres = ref$sd.thres,genes = variable.genes,fine.tune = fine.tune)
   
   about = list(Organism = capitalize(species),Citation=citation,Technology = technology,RefData=ref$name)
   
@@ -721,9 +722,9 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,do.main.types=T,speci
   if (do.main.types==T) {
     print(paste0('Annotating data with ',ref$name,' (Main types)...'))
     types = ref$main_types
-    singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.8, genes = variable.genes.main)
+    singler$SingleR.single.main = SingleR("single",sc.data,ref$data,types=types,sd.thres = ref$sd.thres, quantile.use = 0.8, genes = variable.genes.main,fine.tune = fine.tune)
     singler$SingleR.single.main$clusters = SingleR.Cluster(singler$SingleR.single.main,10)
-    singler$SingleR.clusters.main = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres, quantile.use = 0.8,genes = variable.genes.main)
+    singler$SingleR.clusters.main = SingleR("cluster",sc.data,ref$data,types=types, clusters=factor(clusters),sd.thres = ref$sd.thres, quantile.use = 0.8,genes = variable.genes.main,fine.tune = fine.tune)
   }
   
   if (!(ref$name %in% c('Immgen','RNAseq','HPCA','Blueprint_Encode','Fantom','GSE43005'))) {
@@ -855,7 +856,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
   print(project.name)
   
   #creat Seurat object
-  sc = SingleR.CreateSeurat(project.name,counts,min.genes=min.genes,min.cells=min.cells,regress.out=regress.out,npca=npca,species=species,temp.dir=temp.dir)
+  sc = SingleR.CreateSeurat(project.name,counts,min.genes=min.genes,min.cells=min.cells,regress.out=regress.out,npca=npca,temp.dir=temp.dir)
   
   orig.ident = orig.ident[colnames(sc@data)]
   sc.data = counts[,colnames(sc@data)]
@@ -1007,20 +1008,20 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,tech
         data('Immgen')
       if (!exists('mouse.rnaseq'))
         data('Mouse-RNAseq')
-      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes),
-                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
+      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
       )
     } else if (species == 'Human') {
       if(!exists('hpca'))
         data ('HPCA')
       if (!exists('blueprint_encode'))
         data('Blueprint_Encode')
-      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes),
-                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes))
+      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune))
     }
   } else {
     res = lapply(ref.list, FUN=function(x) {
-      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes)
+      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
     })
   }
   
