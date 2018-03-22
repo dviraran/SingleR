@@ -748,13 +748,8 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,do.main.types=T,speci
 #' @return a Seurat object
 SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 500,min.cells = 2,regress.out = 'nUMI',npca = 10,resolution=0.8,temp.dir=NULL) {
   sc = CreateSeuratObject(raw.data = sc.data, min.cells = min.cells, min.genes = min.genes, project = project.name)
-  if (species == 'Human') {
-    mtgenes = '^MT-'
-    
-  } else {
-    mtgenes = '^Mt-'
-  }
-  mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), value = TRUE)
+  mtgenes = '^mt-'
+  mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), value = TRUE,ignore.case=TRUE)
   percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
   sc <- AddMetaData(object = sc, metadata = percent.mito, col.name = "percent.mito")
 
