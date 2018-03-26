@@ -341,7 +341,7 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
 #' @param order.by.clusters if TRUE columns are ordered by the input clusters, and are not clustered again
 #' @param cells_order an input order for the column
 #' @param silent if TRUE do not draw the plot  
-SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,normalize=T,order.by.clusters=F,cells_order=NULL,silent=F) {
+SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,normalize=T,order.by.clusters=F,cells_order=NULL,silent=F, ...) {
   if (is.null(labels)) {
     labels = rownames(SingleR$scores)
   }
@@ -370,19 +370,25 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
     rownames(clusters) = colnames(data)
     
   }
+  additional_params = list(...)
+  if (is.null(additional_params$annotation_colors)) {
+    annotation_colors = NA
+  } else {
+    annotation_colors = additional_params$annotation_colors
+  }
   if (order.by.clusters==T) {
     data = data[,order(clusters$Clusters)]
     clusters = clusters[order(clusters$Clusters),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent, annotation_colors=annotation_colors)
   } else if (!is.null(cells_order)) {
     data = data[,order(cells_order)]
     clusters = clusters[order(cells_order),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent)
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent, annotation_colors=annotation_colors)
   } else {
     if (!is.null(clusters)) {
-      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,silent=silent)
+      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,silent=silent, annotation_colors=annotation_colors)
     } else {
-      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,silent=silent,width=8,height=5)
+      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,silent=silent, annotation_colors=annotation_colors)
       
     }
   }
@@ -480,9 +486,11 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
 #' @param sc_data  the single-cell RNA-seq data set as a matrix with genes as rownames. If the data if from a full-length platform, counts must be normalized to gene length (TPM, RPKM, FPKM, etc.).
 #' @param species (\code{"Mouse"} or \code{"Human"})
 #' @param signatures a GeneSetCollection oject, or NULL to use default signatures
+#' @param n.break run ssGSEA for n.break at a time.
+
 #'
 #' @return scores for each signature and single cell
-calculateSignatures = function(sc_data,species='Human',signatures=NULL) {
+calculateSignatures = function(sc_data,species='Human',signatures=NULL, n.break=1000) {
   data('signatures')
   if(is.null(signatures)) {
     if (species=="Human") {
@@ -497,12 +505,12 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL) {
   sc_data = as.matrix(sc_data)
   rownames(sc_data) = tolower(rownames(sc_data))
   numClusters = min(detectCores(all.tests = FALSE, logical = TRUE)-1,4)
-  # break to groups of 1000 cells
+  # break to groups of n.break cells
   scores = matrix(NA,length(egc),ncol(sc_data))
-  wind = seq(1,ncol(sc_data),by=1000)
-  print(paste('Using sets of 1000 cells. Running',length(wind),'times.'))
+  wind = seq(1,ncol(sc_data),by=n.break)
+  print(paste('Using sets of',n.break, 'cells. Running',length(wind),'times.'))
   for (i in wind) {
-    last = min(ncol(sc_data),i+999)
+    last = min(ncol(sc_data),i+n.break-1)
     a = gsva(sc_data[,i:last],egc,method='ssgsea',ssgsea.norm=F,parallel.sz=numClusters,parallel.type='FORK')
     scores[,i:last] = a
   }
@@ -919,7 +927,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
   
   singler$meta.data = list(project.name=project.name,orig.ident=orig.ident,clusters=sc@ident,xy=sc@dr$tsne@cell.embeddings)
   
-#  singler = remove.Unnecessary.Data.single(singler)
+  singler = remove.Unnecessary.Data.single(singler)
   
   singler
   
@@ -1035,7 +1043,7 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,tech
   
   singler$meta.data = list(project.name=project.name,orig.ident=orig.ident)
   
-#  singler = remove.Unnecessary.Data.single(singler)
+  singler = remove.Unnecessary.Data.single(singler)
   
   singler
   

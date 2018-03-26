@@ -183,7 +183,7 @@ annotation_col = data.frame(Cluster=K,Condition=factor(cond))
 rownames(annotation_col) = singler.macs$seurat@cell.names
 cluster_colors = gg_color_hue(3)
 cond_color = brewer.pal(3, 'Set2')
-annotation_colors = list(Condition=c(Bleomycin=cond_color[2],Control=cond_color[1]),
+annotation_colors = list(Condition=c(Bleomycin=cond_color[1],Control=cond_color[2]),
                          Cluster=c('C1'=cluster_colors[1],'C2'=cluster_colors[2],'C3'=cluster_colors[3]))
 
 cond.cluster = table(annotation_col$Condition,K)/cbind(table(full.cond),table(full.cond),table(full.cond))
