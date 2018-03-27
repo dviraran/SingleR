@@ -345,7 +345,7 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
   if (is.null(labels)) {
     labels = rownames(SingleR$scores)
   }
-  m = apply(SingleR$scores[labels,],2,max)
+  m = apply(t(scale(t(SingleR$scores[labels,]))),2,max)
   
   thres = sort(m,decreasing=TRUE)[min(top.n,length(m))]
   
@@ -1047,5 +1047,38 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,tech
   
   singler
   
+}
+
+Combine.Multiple.10X.Datasets = function(dirs,random.sample=0,min.genes=500) {
+  print(paste(1,basename(dirs[1])))
+  sc.data = as.matrix(Read10X(dirs[1]))
+  orig.ident = rep(basename(dirs[1]),ncol(sc.data))
+  
+  if (random.sample>0) {
+    A = colSums(as.matrix(sc.data)>0)
+    use = sample(which(A>min.genes),random.sample)
+    sc.data = sc.data[,use]
+    orig.ident = orig.ident[use]
+  }
+  
+  for (j in 2:length(dirs)) {
+    print(paste(j,basename(dirs[j])))
+    data <- Read10X(dirs[j])
+    ident = rep(basename(dirs[j]),ncol(data))
+    if (random.sample>0) {
+      A = colSums(as.matrix(data)>0)
+      use = sample(which(A>min.genes),random.sample)
+      data = data[,use]
+      ident = ident[use]
+    }
+    
+    orig.ident = c(orig.ident,ident)
+    sc.data = cbind(sc.data,data)
+  }
+  
+  colnames(sc.data) = make.unique(colnames(sc.data))
+  names(orig.ident) = colnames(sc.data)
+  
+  list(sc.data=sc.data,orig.ident=orig.ident)
 }
 
