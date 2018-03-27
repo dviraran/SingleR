@@ -25,6 +25,8 @@ singler = CreateSinglerSeuratObject(counts.file,annot,project.name,species,citat
 save(singler,file=paste0(project.name,'.RData')
 ```
 
+For more details on creating a SingleR object see [SingleR -create object](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR_create.html).
+
 For more details and examples see [SingleR specifications](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR_specifications.html).
 
 # Contributors
