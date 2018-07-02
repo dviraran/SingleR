@@ -187,7 +187,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types, clusters = NULL
   }
   
   mat = medianMatrix(ref_data,types)
-
+  
   if (typeof(genes)=='list') {
     utypes = unique(types)
     n = round(1000*(2/3)^(log2(c(ncol(mat)))))
@@ -334,22 +334,28 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL, quantile.
 #' Plot a heatmap of the scores for all the single cells
 #'
 #' @param SingleR the output from the SingleR function
-#' @param labels labels to present, if NULL all labels presented
+#' @param cells.use single cells to present, if NULL all single cells presented
+#' @param types.use cell types to present, if NULL all cell types presented
 #' @param clusters a clustering to present as annotation in the heatmap
 #' @param top.n number of cell types to presents. Defualt is 40. This can have an effect on the clustering which is performed only on the cell types presented.
 #' @param normalize if TRUE scores are normalized to a 0-1 scale.
 #' @param order.by.clusters if TRUE columns are ordered by the input clusters, and are not clustered again
 #' @param cells_order an input order for the column
 #' @param silent if TRUE do not draw the plot  
-SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,normalize=T,order.by.clusters=F,cells_order=NULL,silent=F, ...) {
-  if (is.null(labels)) {
-    labels = rownames(SingleR$scores)
+SingleR.DrawHeatmap = function(SingleR,cells.use = NULL, types.use = NULL,clusters=NULL,top.n=40,normalize=T,order.by.clusters=F,cells_order=NULL,silent=F, ...) {
+  scores = SingleR$scores
+  if (!is.null(cells.use)) {
+    scores = scores[cells.use,]
   }
-  m = apply(t(scale(t(SingleR$scores[labels,]))),2,max)
+  if (!is.null(types.use)) {
+    scores = scores[,types.use]
+  }
+  
+  m = apply(t(scale(t(scores))),2,max)
   
   thres = sort(m,decreasing=TRUE)[min(top.n,length(m))]
   
-  data = as.matrix(SingleR$scores)
+  data = as.matrix(scores)
   
   if (normalize==T) {
     mmax = rowMaxs(data)
@@ -357,11 +363,8 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
     data = (data-mmin)/(mmax-mmin)
   }
   
-  if (SingleR$method == "cluster") {
-    data = data^3
-  } else if (SingleR$method == "single") {
-    data = data[labels,m>(thres-1e-6)]^3
-  }
+  data = data[,m>(thres-1e-6)]^3
+  
   data = t(data)
   
   if (!is.null(clusters)) {
@@ -376,19 +379,20 @@ SingleR.DrawHeatmap = function(SingleR,labels = NULL,clusters=NULL,top.n=40,norm
   } else {
     annotation_colors = additional_params$annotation_colors
   }
+  clustering_method = 'ward.D2'
   if (order.by.clusters==T) {
     data = data[,order(clusters$Clusters)]
     clusters = clusters[order(clusters$Clusters),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent, annotation_colors=annotation_colors)
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method=clustering_method,fontsize_row=9,annotation_col = clusters,cluster_cols = F,silent=silent, annotation_colors=annotation_colors)
   } else if (!is.null(cells_order)) {
-    data = data[,order(cells_order)]
-    clusters = clusters[order(cells_order),,drop=F]
-    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,cluster_cols = F,silent=silent, annotation_colors=annotation_colors)
+    data = data[,cells_order]
+    clusters = clusters[cells_order,,drop=F]
+    pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method=clustering_method,fontsize_row=9,annotation_col = clusters,cluster_cols = F,silent=silent, annotation_colors=annotation_colors)
   } else {
     if (!is.null(clusters)) {
-      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,annotation_col = clusters,silent=silent, annotation_colors=annotation_colors)
+      pheatmap(data,border_color=NA,show_colnames=FALSE,clustering_method=clustering_method,fontsize_row=9,annotation_col = clusters,silent=silent, annotation_colors=annotation_colors)
     } else {
-      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method='ward.D2',fontsize_row=6,silent=silent, annotation_colors=annotation_colors)
+      pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,clustering_method=clustering_method,fontsize_row=9,silent=silent, annotation_colors=annotation_colors)
       
     }
   }
@@ -430,7 +434,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
     lev = levels(df$ident)
     df$ident = factor(df$ident,levels = c(lev[-which(lev %in% 'Other')],'Other'))
   }
-
+  
   num.levels = length(levels(df$ident))
   if (num.levels<0)
     colors = getcol(c(1:length(unique(labels))))
@@ -476,7 +480,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, clusters = NULL,
                 panel.grid.minor = element_blank(),
                 panel.background = element_blank(), 
                 axis.line = element_line(colour = "black"))
-
+  
   out = list(p=p,df=df,num.levels=num.levels)
   
 }
@@ -550,9 +554,19 @@ clusters.map.values = function(cluster_ids,singler_clusters) {
 #' @param num.clusts number of clusters to output
 #'
 #' @return cluster id for each single cell
-SingleR.Cluster = function(SingleR,num.clusts=10) {
-  scores = t(scale(t(SingleR$scores^3)))
-  hc = hclust(dist(scores,method='euclidean'),method='ward.D2')
+SingleR.Cluster = function(SingleR,num.clusts=10,normalize_rows=T,normalize_cols=F) {
+  if (normalize_cols==T) {
+    SingleR$scores = scale(SingleR$scores)
+  }
+  if (normalize_rows==T) {
+    scores = t(scale(t(SingleR$scores^5)))
+  } else {
+    scores = SingleR$scores
+  }
+  r <- cor(t(scores), method="pearson")
+  d <- as.dist(1-r)
+  hc = hclust(d,method='ward.D2')
+  #hc = hclust(dist(scores,method='maximum'),method='ward.D2')
   cl = cutree(hc,k=num.clusts)
   list(hc=hc,cl=factor(cl))
 }
@@ -570,7 +584,7 @@ SingleR.Subset = function(singler,subsetdata) {
     s$seurat = SubsetData(s$seurat,colnames(s$seurat@data)[subsetdata])
     subsetdata = unlist(lapply(s$seurat@cell.names,FUN=function(x) which(singler$singler[[1]]$SingleR.single$cell.names==x)))
   }
-
+  
   for (i in 1:length(s$singler)) {
     s$singler[[i]]$SingleR.single$cell.names = s$singler[[i]]$SingleR.single$cell.names[subsetdata]
     s$singler[[i]]$SingleR.clusters$cell.names = s$singler[[i]]$SingleR.clusters$cell.names[subsetdata]
@@ -595,7 +609,7 @@ SingleR.Subset = function(singler,subsetdata) {
   if(!is.null(s[['other']])) {
     s$other = s$other[subsetdata]
   }
-
+  
   if (!is.null(s$meta.data)) {
     s$meta.data$orig.ident = factor(as.character(s$meta.data$orig.ident[subsetdata]))
     s$meta.data$xy = s$meta.data$xy[subsetdata,]
@@ -754,19 +768,21 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,do.main.types=T,speci
 #' @param temp.dir used by FindClusters function.
 #'
 #' @return a Seurat object
-SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 500,min.cells = 2,regress.out = 'nUMI',npca = 10,resolution=0.8,temp.dir=NULL) {
+SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 500,min.cells = 2,regress.out = 'nUMI',npca = 10,resolution=0.8,temp.dir=NULL,do.main.types=T) {
   sc = CreateSeuratObject(raw.data = sc.data, min.cells = min.cells, min.genes = min.genes, project = project.name)
   mtgenes = '^mt-'
   mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), value = TRUE,ignore.case=TRUE)
   percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
   sc <- AddMetaData(object = sc, metadata = percent.mito, col.name = "percent.mito")
-
+  
   sc <- NormalizeData(object = sc, normalization.method = "LogNormalize", scale.factor = 10000)
   sc <- FindVariableGenes(object = sc, mean.function = ExpMean, dispersion.function = LogVMR, x.low.cutoff = 0.0125, x.high.cutoff = 3, y.cutoff = 0.5, do.contour = F, do.plot = F)
   
   sc <- ScaleData(object = sc, vars.to.regress = regress.out)
   
   sc <- RunPCA(object = sc, pc.genes = sc@var.genes, do.print = FALSE)
+  
+  PCElbowPlot(object = sc)
   
   sc <- FindClusters(object = sc, reduction.type = "pca", dims.use = 1:npca,resolution = resolution, print.output = 0, save.SNN = F, temp.file.location = temp.dir)
   
@@ -819,7 +835,8 @@ SingleR.CreateKangAnnotations = function(sc.data) {
 #' @param temp.dir used by the SingleR web app.
 #'
 #' @return a SingleR object containg a Seurat object
-CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,variable.genes='de',fine.tune=T,reduce.file.size=T,do.signatures=T,min.cells=2,npca=10,regress.out='nUMI',reduce.seurat.object=T,temp.dir=NULL) {
+#' Wrapper function to create a SingleR object + Seurat object
+CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,variable.genes='de',fine.tune=T,reduce.file.size=T,do.signatures=T,min.cells=2,npca=10,regress.out='nUMI',reduce.seurat.object=T,temp.dir=NULL,do.main.types=T) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))
@@ -895,20 +912,20 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
         data('Immgen')
       if (!exists('mouse.rnaseq'))
         data('Mouse-RNAseq')
-      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune),
-                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
+      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune)
       )
     } else if (species == 'Human') {
       if(!exists('hpca'))
         data ('HPCA')
       if (!exists('blueprint_encode'))
         data('Blueprint_Encode')
-      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune),
-                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune))
+      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune))
     }
   } else {
     res = lapply(ref.list, FUN=function(x) {
-      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
+      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune)
     })
   }
   
@@ -933,6 +950,8 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
   
 }
 
+
+
 #' Wrapper function to create a SingleR object
 #'
 #' @param counts a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.
@@ -951,7 +970,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,min.genes=50
 #' @param temp.dir
 #'
 #' @return a SingleR object
-CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,variable.genes='de',fine.tune=T,do.signatures=T,clusters=NULL,temp.dir=NULL) {
+CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,technology='10X',species='Human',citation='',ref.list=list(),normalize.gene.length=F,variable.genes='de',fine.tune=T,do.signatures=T,clusters=NULL,temp.dir=NULL,do.main.types=T) {
   if (typeof(counts) == 'character') {
     if (file.info(counts)$isdir==T) {
       counts = as.matrix(Read10X(counts))
@@ -1011,20 +1030,20 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,min.genes=500,tech
         data('Immgen')
       if (!exists('mouse.rnaseq'))
         data('Mouse-RNAseq')
-      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune),
-                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
+      res = list(SingleR.CreateObject(sc.data.gl,immgen,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune)
       )
     } else if (species == 'Human') {
       if(!exists('hpca'))
         data ('HPCA')
       if (!exists('blueprint_encode'))
         data('Blueprint_Encode')
-      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune),
-                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = T,variable.genes=variable.genes,fine.tune=fine.tune))
+      res = list(SingleR.CreateObject(sc.data.gl,hpca,clusters,species,citation,technology,do.main.types = do.main.types,variable.genes=variable.genes,fine.tune=fine.tune),
+                 SingleR.CreateObject(sc.data.gl,blueprint_encode,clusters,species,citation,technology,do.main.types = do.main.types,variable.genes=variable.genes,fine.tune=fine.tune))
     }
   } else {
     res = lapply(ref.list, FUN=function(x) {
-      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=T,variable.genes=variable.genes,fine.tune=fine.tune)
+      SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,do.main.types=do.main.types,variable.genes=variable.genes,fine.tune=fine.tune)
     })
   }
   
@@ -1082,3 +1101,134 @@ Combine.Multiple.10X.Datasets = function(dirs,random.sample=0,min.genes=500) {
   list(sc.data=sc.data,orig.ident=orig.ident)
 }
 
+SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,xy=NULL) {
+  
+  singler=c()
+  singler$singler = singler.list[[1]]$singler
+  for (j in 1:length(singler.list[[1]]$singler)) {
+    singler$singler[[j]]$SingleR.cluster = c()
+    singler$singler[[j]]$SingleR.cluster.main = c()
+    singler$singler[[j]]$SingleR.single$clusters=c()
+  }
+  singler$meta.data = singler.list[[1]]$meta.data
+  singler$meta.data$clusters=c()
+  singler$meta.data$xy=c()
+  singler$meta.data$data.sets = rep(singler$meta.data$project.name,length(singler$meta.data$orig.ident))
+  
+  for (i in 2:length(singler.list)) {
+    for (j in 1:length(singler$singler)) {
+      if (singler.list[[i]]$singler[[j]]$about$RefData!=singler.list[[1]]$singler[[j]]$about$RefData) {
+        stop('The objects are not ordered by the same reference data.')
+      }
+      
+      singler$singler[[j]]$about$Organism = c(singler$singler[[j]]$about$Organism,singler.list[[i]]$singler[[j]]$about$Organism)
+      singler$singler[[j]]$about$Citation = c(singler$singler[[j]]$about$Citation,singler.list[[i]]$singler[[j]]$about$Citation)
+      singler$singler[[j]]$about$Technology = c(singler$singler[[j]]$about$Technology,singler.list[[i]]$singler[[j]]$about$Technology)
+      #singler$singler[[j]]$about$RefData = c(singler$singler[[j]]$about$RefData,singler.list[[i]]$singler[[j]]$about$RefData)
+      
+      singler$singler[[j]]$SingleR.single$labels =  rbind(singler$singler[[j]]$SingleR.single$labels,singler.list[[i]]$singler[[j]]$SingleR.single$labels)
+      singler$singler[[j]]$SingleR.single$labels1 =  rbind(singler$singler[[j]]$SingleR.single$labels1,singler.list[[i]]$singler[[j]]$SingleR.single$labels1)
+      singler$singler[[j]]$SingleR.single$scores =  rbind(singler$singler[[j]]$SingleR.single$scores,singler.list[[i]]$singler[[j]]$SingleR.single$scores)
+      
+      singler$singler[[j]]$SingleR.single.main$labels =  rbind(singler$singler[[j]]$SingleR.single.main$labels,singler.list[[i]]$singler[[j]]$SingleR.single.main$labels)
+      singler$singler[[j]]$SingleR.single.main$labels1 =  c(singler$singler[[j]]$SingleR.single.main$labels1,singler.list[[i]]$singler[[j]]$SingleR.single.main$labels1)
+      singler$singler[[j]]$SingleR.single.main$scores =  rbind(singler$singler[[j]]$SingleR.single.main$scores,singler.list[[i]]$singler[[j]]$SingleR.single.main$scores)
+      
+      singler$singler[[j]]$SingleR.single$cell.names =  c(singler$singler[[j]]$SingleR.single$cell.names,singler.list[[i]]$singler[[j]]$SingleR.single$cell.names)
+      singler$singler[[j]]$SingleR.single.main$cell.names =  c(singler$singler[[j]]$SingleR.single$cell.names,singler.list[[i]]$singler[[j]]$SingleR.single.main$cell.names)
+      
+    }
+    singler$meta.data$project.name = paste(singler$meta.data$project.name,singler.list[[i]]$meta.data$project.name,sep='+')
+    singler$meta.data$orig.ident = c(singler$meta.data$orig.ident,singler.list[[i]]$meta.data$orig.ident)
+    singler$meta.data$data.sets = c(singler$meta.data$data.sets,rep(singler.list[[i]]$meta.data$project.name,length(singler.list[[i]]$meta.data$orig.ident)))
+    
+  }
+  
+  for (j in 1:length(singler$singler)) {
+    if (!is.null(order)) {
+      singler$singler[[j]]$SingleR.single$labels = singler$singler[[j]]$SingleR.single$labels[order,]
+      singler$singler[[j]]$SingleR.single$labels1 = singler$singler[[j]]$SingleR.single$labels1[order,]
+      singler$singler[[j]]$SingleR.single$scores = singler$singler[[j]]$SingleR.single$scores[order,]
+      
+      singler$singler[[j]]$SingleR.single.main$labels = singler$singler[[j]]$SingleR.single.main$labels[order,]
+      singler$singler[[j]]$SingleR.single.main$labels1 = singler$singler[[j]]$SingleR.single.main$labels1[order,]
+      singler$singler[[j]]$SingleR.single.main$scores = singler$singler[[j]]$SingleR.single.main$scores[order,]
+      
+    }
+    
+    #  singler$singler[[j]]$SingleR.single$clusters = SingleR.Cluster(singler$singler[[j]]$SingleR.single,10)
+    #  singler$singler[[j]]$SingleR.single.main$clusters = SingleR.Cluster(singler$singler[[j]]$SingleR.single.main,10)
+  }
+  
+  if (!is.null(clusters) && !is.null(expr)) {
+    data('Immgen')
+    data('Mouse-RNAseq')
+    data ('HPCA')
+    data('Blueprint_Encode')
+    for (j in 1:length(singler$singler)) {
+      if (is.character(singler$singler[[j]]$about$RefData)) {
+        ref = get(singler$singler[[j]]$about$RefData )
+      } else {
+        ref = singler$singler[[j]]$about$RefData
+      }
+      singler$singler[[j]]$SingleR.clusters = SingleR("cluster",expr,ref$data,types=ref$types, clusters = factor(clusters),sd.thres = ref$sd.thres,genes = 'de',fine.tune = T)
+      singler$singler[[j]]$SingleR.clusters.main = SingleR("cluster",expr,ref$data,types=ref$main_types, clusters = factor(clusters),sd.thres = ref$sd.thres,genes = 'de',fine.tune = T)
+    }
+    singler$meta.data$clusters = clusters
+    if (!is.null(xy)) {
+      singler$meta.data$xy = xy
+    }
+  }
+  
+  singler
+}
+
+superRef = function(ref.name,ref,ids) {
+  ids = which(ids)
+  dup = duplicated(names(ref$titles)[ids])
+  ids = ids[!dup]
+  de.genes = CreateVariableGeneSet(ref$data[,ids],ref$titles[ids],200)
+  #de.genes.main = CreateVariableGeneSet(ref$data,main_types,300)
+  de.genes.main = de.genes 
+  list(name=ref.name,data=ref$data[,ids],types=ref$titles[ids],main_types=ref$titles[ids],de.genes=de.genes,de.genes.main=de.genes.main,sd.thres=1)
+}
+
+Combine10X = function(tenx.dir,random.sample=0) {
+  dirs = list.dirs(path=tenx.dir, full.names=F, recursive=FALSE)
+  sc.data = as.matrix(Read10X(paste0(tenx.dir,'/',dirs[1])))
+  orig.ident = rep(dirs[1],ncol(sc.data))
+  
+  g = rownames(sc.data)
+  print(paste('1',ncol(sc.data)))
+  
+  if (random.sample>0) {
+    A = colSums(as.matrix(sc.data)>0)
+    print(length(which(A>500)))
+    use = sample(which(A>500),random.sample)
+    sc.data = sc.data[,use]
+    orig.ident = orig.ident[use]
+  }
+  
+  for (j in 2:length(dirs)) {
+    print(paste(j,ncol(sc.data)))
+    data <- Read10X(paste0(tenx.dir,'/',dirs[j]))
+    ident = rep(dirs[j],ncol(data))
+    if (random.sample>0) {
+      A = colSums(as.matrix(data)>0)
+      print(length(which(A>500)))
+      use = sample(which(A>500),random.sample)
+      data = data[,use]
+      ident = ident[use]
+    }
+    
+    orig.ident = c(orig.ident,ident)
+    sc.data = cbind(sc.data[g,],data[g,])
+  }
+  
+  print(length(which(colSums(as.matrix(sc.data)>0)>500)))
+  
+  colnames(sc.data) = make.unique(colnames(sc.data))
+  names(orig.ident) = colnames(sc.data)
+  
+  list(sc.data=as.matrix(sc.data),orig.ident=orig.ident)
+}
