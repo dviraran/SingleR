@@ -23,15 +23,15 @@ To create the SingleR object simply run the following function:
 
 ```{r eval=FALSE,echo=TRUE}
 singler = CreateSinglerSeuratObject(counts, annot = NULL, project.name,
-  min.genes = 500, technology = "10X", species = "Human", citation = "",
+  min.genes = 500, technology = "10X", species = "Human" (or "Mouse"), citation = "",
   ref.list = list(), normalize.gene.length = F, variable.genes = "de",
   fine.tune = T, reduce.file.size = T, do.signatures = T, min.cells = 2,
-  npca = 10, regress.out = "nUMI", reduce.seurat.object = T)
-
+  npca = 10, regress.out = "nUMI", do.main.types = T,
+  reduce.seurat.object = T)
 save(singler,file='singler_object.RData')
 ```
 
-  - counts.file may be a tab delimited text file (with the prefix '.txt'), a matrix of the counts or a 10X directory. Importantly, the rownames must be gene symbols.
+  - counts.file may be a tab delimited text file (with the prefix '.txt'), a matrix of the counts or a 10X directory. Importantly, the rownames must be gene symbols. To combine multiple 10X datasets we provide the function Combine.Multiple.10X.Datasets.
   - annot can be a tab delimited text file or a data.frame. Rownames correspond to column names in the counts data.
   - min.genes is a filter on samples with low number of non-zero genes.
   - ref.list is the reference that will be used for the annotation. If not supplied, this wrapper function will use  predefined reference objects depending on the specie - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode. It is probably best to start with these references before using more specific references. See below for explanation on how to generate a reference data set object.
