@@ -18,14 +18,20 @@ library(SingleR)
 
 # Simplest use is running the wrapper function that creates both a SingleR and Seurat object:
 
-# counts.file maybe a tab delimited text file, 10X directory or a matrix. annot is a tab delimited text file or a data.frame with the original identities. normalize.gene.length should be true if the data comes from a full-length platform. min.genes, min.cells, npca and regress.out are passed to Seurat to create a Seurat object object (default values are min.genes=500, min.cells=2, npca=10, regress.out='nUMI').
-singler = CreateSinglerSeuratObject(counts.file,annot,project.name,species,citation,normalize.gene.length,min.genes,regress.out,npca,technology)
+# counts.file maybe a tab delimited text file, 10X directory or a matrix. annot is a tab delimited 
+# text file or a data.frame with the original identities. normalize.gene.length should be true if 
+# the data comes from a full-length platform. min.genes, min.cells, npca and regress.out are passed 
+# to Seurat to create a Seurat object object:
+singler = CreateSinglerSeuratObject(counts.file, annot, project.name,
+  min.genes = 500, technology, species = "Human" (or "Mouse"), citation,
+  normalize.gene.length = F, min.cells = 2, npca = 10
+  regress.out = "nUMI", reduce.seurat.object = T)
 
 # The object can then be saved and uploaded to the SingleR web-app for further analysis and visualization or using functions available in the SingleR package (see vignette).
 save(singler,file=paste0(project.name,'.RData')
 ```
 
-For more details on creating a SingleR object see [SingleR -create object](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR_create.html).
+For more details on creating a SingleR object see [SingleR - create object](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR_create.html).
 
 For more details and examples see [SingleR specifications](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR_specifications.html).
 
