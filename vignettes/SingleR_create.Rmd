@@ -1,7 +1,7 @@
 ---
-title: "SingleR 1.0 - Usage"
+title: "SingleR 0.2.0 - Usage"
 author: "Dvir Aran"
-date: "3/27/2018"
+date: "7/18/2018"
 output: html_document
 ---
 
