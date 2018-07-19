@@ -9,7 +9,7 @@ SingleR.Subset(singler, subsetdata)
 \arguments{
 \item{singler}{as SingleR object}
 
-\item{subsetdata}{a logical vector of single-cells to include in the subseted object}
+\item{subsetdata}{a logical vector of single-cells to include in the subset object}
 }
 \value{
 a subset of the original SingleR vector

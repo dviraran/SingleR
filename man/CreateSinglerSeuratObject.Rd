@@ -8,8 +8,8 @@ CreateSinglerSeuratObject(counts, annot = NULL, project.name,
   min.genes = 500, technology = "10X", species = "Human", citation = "",
   ref.list = list(), normalize.gene.length = F, variable.genes = "de",
   fine.tune = T, reduce.file.size = T, do.signatures = T, min.cells = 2,
-  npca = 10, regress.out = "nUMI", reduce.seurat.object = T,
-  temp.dir = NULL)
+  npca = 10, regress.out = "nUMI", do.main.types = T,
+  reduce.seurat.object = T, temp.dir = NULL)
 }
 \arguments{
 \item{counts}{a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.}
@@ -30,9 +30,11 @@ CreateSinglerSeuratObject(counts, annot = NULL, project.name,
 
 \item{normalize.gene.length}{if a full-length method set to TRUE, if a 3' method set to FALSE.}
 
-\item{variable.genes}{variable gene method to use - 'sd' or 'de'. Defualt is 'de'.}
+\item{variable.genes}{variable gene method to use - 'sd' or 'de'. Default is 'de'.}
 
-\item{fine.tune}{perform fine tuning. Defualt is TRUE. Fine-tuning may take long to run.}
+\item{fine.tune}{perform fine tuning. Default is TRUE. Fine-tuning may take long to run.}
+
+\item{reduce.file.size}{remove less used SingleR fields that increase the object size.}
 
 \item{do.signatures}{create signatures data}
 
@@ -42,12 +44,14 @@ CreateSinglerSeuratObject(counts, annot = NULL, project.name,
 
 \item{regress.out}{variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.}
 
+\item{do.main.types}{run the SingleR pipeline for main cell types (cell types grouped together) as well.}
+
 \item{reduce.seurat.object}{if TRUE removes the raw data and other high memory objects from the Seurat object.}
 
 \item{temp.dir}{used by the SingleR web app.}
 }
 \value{
-a SingleR object containg a Seurat object
+a SingleR object containing a Seurat object
 }
 \description{
 Wrapper function to create a SingleR object + Seurat object

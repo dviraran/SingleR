@@ -4,17 +4,19 @@
 \alias{SingleR.PlotTsne}
 \title{Plot a colored tSNE plot according to a set of labels}
 \usage{
-SingleR.PlotTsne(SingleR, xy, labels = SingleR$labels, clusters = NULL,
-  do.letters = TRUE, dot.size = 1, do.labels = FALSE, do.legend = TRUE,
-  label.size = 3, title = "", colors = singler.colors, font.size = NULL,
-  alpha = 0.5)
+SingleR.PlotTsne(SingleR, xy, labels = SingleR$labels, score.thres = 0,
+  clusters = NULL, do.letters = TRUE, dot.size = 1, do.labels = FALSE,
+  do.legend = TRUE, label.size = 3, title = "", colors = singler.colors,
+  font.size = NULL, alpha = 0.5)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}
 
 \item{xy}{a matrix with the coordinates of the single cells}
 
-\item{labels}{labels for the single cells, defualt is the SingleR labels}
+\item{labels}{labels for the single cells, Default is the SingleR labels}
+
+\item{score.thres}{single-cells with a score lower than this number are marked as 'X'.}
 
 \item{clusters}{if the SingleR method is 'clusters' then this vector is the cluster id for each single cell}
 
@@ -24,7 +26,7 @@ SingleR.PlotTsne(SingleR, xy, labels = SingleR$labels, clusters = NULL,
 
 \item{do.labels}{only relevant in a 'cluster' method. If TRUE The cluster annotation is shown on top of the cluster.}
 
-\item{do.legend}{if TRUE legend is presened.}
+\item{do.legend}{if TRUE legend is presented.}
 
 \item{label.size}{if do.labels is TRUE then this determines the font size of the labels}
 
@@ -34,7 +36,7 @@ SingleR.PlotTsne(SingleR, xy, labels = SingleR$labels, clusters = NULL,
 
 \item{font.size}{size of fonts in the plot}
 
-\item{alpha}{an alpha for the transperancy of the dots}
+\item{alpha}{an alpha for the transparency of the dots}
 }
 \value{
 a list with ggplot and a data frame with the coordinates and annotations

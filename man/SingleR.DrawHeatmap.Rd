@@ -4,17 +4,20 @@
 \alias{SingleR.DrawHeatmap}
 \title{Plot a heatmap of the scores for all the single cells}
 \usage{
-SingleR.DrawHeatmap(SingleR, labels = NULL, clusters = NULL, top.n = 40,
-  normalize = T, order.by.clusters = F, cells_order = NULL, silent = F)
+SingleR.DrawHeatmap(SingleR, cells.use = NULL, types.use = NULL,
+  clusters = NULL, top.n = 40, normalize = T, order.by.clusters = F,
+  cells_order = NULL, silent = F, ...)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}
 
-\item{labels}{labels to present, if NULL all labels presented}
+\item{cells.use}{single cells to present, if NULL all single cells presented}
+
+\item{types.use}{cell types to present, if NULL all cell types presented}
 
 \item{clusters}{a clustering to present as annotation in the heatmap}
 
-\item{top.n}{number of cell types to presents. Defualt is 40. This can have an effect on the clustering which is performed only on the cell types presented.}
+\item{top.n}{number of cell types to presents. Default is 40. This can have an effect on the clustering which is performed only on the cell types presented.}
 
 \item{normalize}{if TRUE scores are normalized to a 0-1 scale.}
 

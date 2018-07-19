@@ -4,12 +4,17 @@
 \alias{SingleR.Cluster}
 \title{SingleR.Cluster - using the scores data to cluster single cells.}
 \usage{
-SingleR.Cluster(SingleR, num.clusts = 10)
+SingleR.Cluster(SingleR, num.clusts = 10, normalize_rows = T,
+  normalize_cols = F)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}
 
 \item{num.clusts}{number of clusters to output}
+
+\item{normalize_rows}{if TRUE the rows of the SingleR score matrix (single-cells) are scaled. Default is TRUE.}
+
+\item{normalize_cols}{if TRUE the columns of the SingleR score matrix (cell types) are scaled. Default is FALSE.}
 }
 \value{
 cluster id for each single cell

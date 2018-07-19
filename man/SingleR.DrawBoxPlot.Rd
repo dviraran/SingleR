@@ -2,7 +2,7 @@
 % Please edit documentation in R/SingleR.R
 \name{SingleR.DrawBoxPlot}
 \alias{SingleR.DrawBoxPlot}
-\title{Plot boxplots for each lablel for a given single cell.}
+\title{Plot boxplots for each label for a given single cell.}
 \usage{
 SingleR.DrawBoxPlot(sc_data, cell_id, ref, labels.use = NULL,
   quantile.order = 0.8, main_types = F, top.n = 50, tit = NULL,
@@ -25,11 +25,11 @@ SingleR.DrawBoxPlot(sc_data, cell_id, ref, labels.use = NULL,
 
 \item{tit}{title for the boxplot}
 
-\item{colors}{colors to use. Defualt is singler.colors}
+\item{colors}{colors to use. Default is singler.colors}
 }
 \value{
 a list with a ggplot and the scores for the single cell
 }
 \description{
-Plot boxplots for each lablel for a given single cell.
+Plot boxplots for each label for a given single cell.
 }

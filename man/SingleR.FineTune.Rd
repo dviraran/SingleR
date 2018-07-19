@@ -18,11 +18,11 @@ SingleR.FineTune(sc_data, ref_data, types, scores, quantile.use,
 
 \item{scores}{the calculated scores per cell type produced by SingleR.ScoreData function}
 
-\item{quantile.use}{correlation coefficients are aggregated for multiple cell types in the reference data set. This parameter allows to choose how to sort the cell types scores, by median (0.5) or any other number between 0 and 1. The deafult is 0.9.}
+\item{quantile.use}{correlation coefficients are aggregated for multiple cell types in the reference data set. This parameter allows to choose how to sort the cell types scores, by median (0.5) or any other number between 0 and 1. The default is 0.9.}
 
-\item{fine.tune.thres}{the fine tunning step performs the scoring procedure for the top scoring labels using only genes that vary between those cell types in the reference data set. The top labels are those with a score lower than the top score by less than fine.tune.thres}
+\item{fine.tune.thres}{the fine tuning step performs the scoring procedure for the top scoring labels using only genes that vary between those cell types in the reference data set. The top labels are those with a score lower than the top score by less than fine.tune.thres}
 
-\item{genes}{list of genes to use for the annotations, or a method for extracting the genes from the data. Available methods are standard deviation and gene dispersion (\code{"sd"} or \code{"de"}). Deafult is "de".}
+\item{genes}{list of genes to use for the annotations, or a method for extracting the genes from the data. Available methods are standard deviation and gene dispersion (\code{"sd"} or \code{"de"}). default is "de".}
 
 \item{sd.thres}{if genes=='sd' then this is the threshold for defining a variable gene.}
 

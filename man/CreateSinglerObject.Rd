@@ -7,7 +7,8 @@
 CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
   technology = "10X", species = "Human", citation = "",
   ref.list = list(), normalize.gene.length = F, variable.genes = "de",
-  fine.tune = T, do.signatures = T, clusters = NULL, temp.dir = NULL)
+  fine.tune = T, do.signatures = T, clusters = NULL, do.main.types = T,
+  reduce.file.size = T, temp.dir = NULL)
 }
 \arguments{
 \item{counts}{a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.}
@@ -16,27 +17,31 @@ CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
 
 \item{project.name}{the project name}
 
-\item{min.genes}{Include cells where at least this many genes are detected.}
+\item{min.genes}{Include cells where at least this many genes are detected (number non-zero genes).}
 
 \item{technology}{The technology used for creating the single-cell data.}
 
-\item{species}{The species of the sample ('Human' or 'Mouse')}
+\item{species}{The species of the sample ('Human' or 'Mouse').}
 
-\item{citation}{a citation for the project}
+\item{citation}{a citation for the project.}
 
 \item{ref.list}{a list of reference objects. If NULL uses the predefined reference objects - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode.}
 
 \item{normalize.gene.length}{if a full-length method set to TRUE, if a 3' method set to FALSE.}
 
-\item{variable.genes}{variable gene method to use - 'sd' or 'de'. Defualt is 'de'.}
+\item{variable.genes}{variable gene method to use - 'sd' or 'de'. Default is 'de'.}
 
-\item{fine.tune}{perform fine tuning. Defualt is TRUE. Fine-tuning may take long to run.}
+\item{fine.tune}{perform fine tuning. Default is TRUE. Fine-tuning may take long to run.}
 
 \item{do.signatures}{create signatures data}
 
 \item{clusters}{input cluster id for each of the cells with at least min.genes, if NULL uses SingleR clusterings.}
 
-\item{temp.dir}{}
+\item{do.main.types}{run the SingleR pipeline for main cell types (cell types grouped together) as well.}
+
+\item{reduce.file.size}{remove less used SingleR fields that increase the object size.}
+
+\item{temp.dir}{used by the SingleR webtool.}
 }
 \value{
 a SingleR object
