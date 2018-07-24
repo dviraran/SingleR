@@ -298,7 +298,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
 #'
 #' @return a list with the labels and scores
 SingleR <- function(method = "single", sc_data, ref_data, types, 
-                    clusters = NULL, genes = "sd", quantile.use = 0.8, 
+                    clusters = NULL, genes = "de", quantile.use = 0.8, 
                     p.threshold = 0.05, fine.tune = TRUE, 
                     fine.tune.thres = 0.05,sd.thres=1, do.pvals = T) {
   rownames(ref_data) = tolower(rownames(ref_data))
@@ -673,7 +673,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, score.thres=0,
 #'
 #' @return ggplot2 object
 SingleR.PlotFeature = function(SingleR,seurat, plot.feature='MaxScore', 
-                               dot.size=1) {
+                               dot.size=1,title=NULL) {
   df = data.frame(row.names = rownames(seurat@cell.names),
                   seurat@dr$tsne@cell.embeddings)
   if (length(plot.feature)==nrow(df)) {
@@ -692,10 +692,13 @@ SingleR.PlotFeature = function(SingleR,seurat, plot.feature='MaxScore',
     df$Feature = seurat@data[plot.feature,]
     tit = plot.feature
   }
+  if (is.null(title)) {
+    title = tit
+  }
   ggplot(df,aes(x=tSNE_1,y=tSNE_2)) + 
     geom_point(aes(color=Feature), size=dot.size)+
     scale_colour_gradient(low='gray',high='blue')+
-    ggtitle(tit)
+    ggtitle(title) + theme_classic()
 }
 
 #' Calculate single-sample gene set enrichment (ssGSEA) for each single cell
@@ -774,8 +777,8 @@ clusters.map.values = function(cluster_ids,singler_clusters) {
 #' @param normalize_cols if TRUE the columns of the SingleR score matrix (cell types) are scaled. Default is FALSE. 
 #'
 #' @return cluster id for each single cell
-SingleR.Cluster = function(SingleR,num.clusts=10,normalize_rows=T,
-                           normalize_cols=F) {
+SingleR.Cluster = function(SingleR,num.clusts=10,normalize_rows=F,
+                           normalize_cols=T) {
   if (normalize_rows==T) {
     SingleR$scores = scale(SingleR$scores)
   }
@@ -1376,7 +1379,9 @@ Combine.Multiple.10X.Datasets = function(dirs,random.sample=0,min.genes=500) {
   list(sc.data=sc.data,orig.ident=orig.ident)
 }
 
-#' Combining SingleR objects together to one object. This function can be useful when the memory is insufficient to analyze the whole counts matrix. We can analyze subsets of the full data and combine them together afterwards.
+#' Combining SingleR objects together to one object. 
+#' 
+#' This function can be useful when the memory is insufficient to analyze the whole counts matrix. We can analyze subsets of the full data and combine them together afterwards.
 #'
 #' @param singler.list a list of SingleR objects
 #' @param order a vector of the cells name to order the SingleR object by. Important if there is a pre-built single-cell object, and the order of cells in SingleR needs to be in the same order.

@@ -8,7 +8,7 @@
 \title{SingleR: A package for reference-based single-cell RNA-seq annotation}
 \usage{
 SingleR(method = "single", sc_data, ref_data, types, clusters = NULL,
-  genes = "sd", quantile.use = 0.8, p.threshold = 0.05,
+  genes = "de", quantile.use = 0.8, p.threshold = 0.05,
   fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1, do.pvals = T)
 }
 \arguments{

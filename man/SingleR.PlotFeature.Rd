@@ -5,7 +5,7 @@
 \title{Plot a feature on the t-SNE plot}
 \usage{
 SingleR.PlotFeature(SingleR, seurat, plot.feature = "MaxScore",
-  dot.size = 1)
+  dot.size = 1, title = NULL)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}

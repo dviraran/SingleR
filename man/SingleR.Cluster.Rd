@@ -4,8 +4,8 @@
 \alias{SingleR.Cluster}
 \title{SingleR.Cluster - using the scores data to cluster single cells.}
 \usage{
-SingleR.Cluster(SingleR, num.clusts = 10, normalize_rows = T,
-  normalize_cols = F)
+SingleR.Cluster(SingleR, num.clusts = 10, normalize_rows = F,
+  normalize_cols = T)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}

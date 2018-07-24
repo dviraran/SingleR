@@ -2,7 +2,7 @@
 % Please edit documentation in R/SingleR.R
 \name{SingleR.Combine}
 \alias{SingleR.Combine}
-\title{Combining SingleR objects together to one object. This function can be useful when the memory is insufficient to analyze the whole counts matrix. We can analyze subsets of the full data and combine them together afterwards.}
+\title{Combining SingleR objects together to one object.}
 \usage{
 SingleR.Combine(singler.list, order = NULL, clusters = NULL, expr = NULL,
   xy = NULL)
@@ -22,5 +22,5 @@ SingleR.Combine(singler.list, order = NULL, clusters = NULL, expr = NULL,
 a combined SingleR object
 }
 \description{
-Combining SingleR objects together to one object. This function can be useful when the memory is insufficient to analyze the whole counts matrix. We can analyze subsets of the full data and combine them together afterwards.
+This function can be useful when the memory is insufficient to analyze the whole counts matrix. We can analyze subsets of the full data and combine them together afterwards.
 }
