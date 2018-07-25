@@ -9,7 +9,7 @@ CreateSinglerSeuratObject(counts, annot = NULL, project.name,
   ref.list = list(), normalize.gene.length = F, variable.genes = "de",
   fine.tune = T, reduce.file.size = T, do.signatures = T, min.cells = 2,
   npca = 10, regress.out = "nUMI", do.main.types = T,
-  reduce.seurat.object = T, temp.dir = NULL)
+  reduce.seurat.object = T, temp.dir = NULL, numCores = SingleR.numCores)
 }
 \arguments{
 \item{counts}{a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.}
@@ -49,6 +49,8 @@ CreateSinglerSeuratObject(counts, annot = NULL, project.name,
 \item{reduce.seurat.object}{if TRUE removes the raw data and other high memory objects from the Seurat object.}
 
 \item{temp.dir}{used by the SingleR web app.}
+
+\item{numCores}{Number of cores to use.}
 }
 \value{
 a SingleR object containing a Seurat object

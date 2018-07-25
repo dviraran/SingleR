@@ -6,7 +6,7 @@
 \usage{
 SingleR.CreateObject(sc.data, ref, clusters = NULL, species = "Human",
   citation = "-", technology = "-", variable.genes = "sd",
-  fine.tune = T, do.main.types = T)
+  fine.tune = T, do.main.types = T, numCores = SingleR.numCores)
 }
 \arguments{
 \item{sc.data}{a matrix of single cell expression data}
@@ -33,6 +33,8 @@ de.genes.main - lists of lists of differentially expressed genes. Can be created
 \item{fine.tune}{perform fine tuning. Default is TRUE. Fine-tuning may take long to run.}
 
 \item{do.main.types}{if TRUE runs a main cell type annotation using the main_types annotation.}
+
+\item{numCores}{Number of cores to use.}
 }
 \value{
 a SingleR object object

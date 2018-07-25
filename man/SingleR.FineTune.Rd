@@ -7,7 +7,7 @@ reference dataset for those cell types and recalculates the scores. This is perf
 only one cell type is left.}
 \usage{
 SingleR.FineTune(sc_data, ref_data, types, scores, quantile.use,
-  fine.tune.thres, genes, sd.thres, mean_mat)
+  fine.tune.thres, genes, sd.thres, mean_mat, numCores = SingleR.numCores)
 }
 \arguments{
 \item{sc_data}{the single-cell RNA-seq data set as a matrix with genes as rownames. If the data if from a full-length platform, counts must be normalized to gene length (TPM, RPKM, FPKM, etc.).}
@@ -28,6 +28,8 @@ SingleR.FineTune(sc_data, ref_data, types, scores, quantile.use,
 
 \item{mean_mat}{if genes='de' then this is a matrix with one column per cell type, each column is the
 average of all samples for the corresponding cell type.}
+
+\item{numCores}{Number of cores to use.}
 }
 \value{
 the top labels for each single cell

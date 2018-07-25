@@ -5,7 +5,7 @@
 \title{Calculate single-sample gene set enrichment (ssGSEA) for each single cell}
 \usage{
 calculateSignatures(sc_data, species = "Human", signatures = NULL,
-  n.break = 1000)
+  n.break = 1000, numCores = SingleR.numCores)
 }
 \arguments{
 \item{sc_data}{the single-cell RNA-seq data set as a matrix with genes as rownames. If the data if from a full-length platform, counts must be normalized to gene length (TPM, RPKM, FPKM, etc.).}
@@ -15,6 +15,8 @@ calculateSignatures(sc_data, species = "Human", signatures = NULL,
 \item{signatures}{a GeneSetCollection object, or NULL to use default signatures}
 
 \item{n.break}{run ssGSEA for n.break at a time.}
+
+\item{numCores}{Number of cores to use.}
 }
 \value{
 scores for each signature and single cell

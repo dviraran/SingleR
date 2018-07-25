@@ -8,7 +8,7 @@ CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
   technology = "10X", species = "Human", citation = "",
   ref.list = list(), normalize.gene.length = F, variable.genes = "de",
   fine.tune = T, do.signatures = T, clusters = NULL, do.main.types = T,
-  reduce.file.size = T, temp.dir = NULL)
+  reduce.file.size = T, temp.dir = NULL, numCores = SingleR.numCores)
 }
 \arguments{
 \item{counts}{a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.}
@@ -42,6 +42,8 @@ CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
 \item{reduce.file.size}{remove less used SingleR fields that increase the object size.}
 
 \item{temp.dir}{used by the SingleR webtool.}
+
+\item{numCores}{Number of cores to use.}
 }
 \value{
 a SingleR object

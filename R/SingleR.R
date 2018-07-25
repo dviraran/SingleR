@@ -90,6 +90,7 @@ NULL
 #' @format A GeneSetCollection of 5 signatures
 "mouse.egc"
 
+SingleR.numCores = min(detectCores(all.tests = FALSE,logical = TRUE)-1,16)
 
 # Colors
 qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
@@ -159,12 +160,13 @@ quantileMatrix = function(mat,groups,q) {
 #' @param sd.thres if genes=='sd' then this is the threshold for defining a variable gene.
 #' @param mean_mat if genes='de' then this is a matrix with one column per cell type, each column is the
 #' average of all samples for the corresponding cell type.
+#' @param numCores Number of cores to use.
 #'
 #' @return the top labels for each single cell
 SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,
-                             fine.tune.thres,genes,sd.thres,mean_mat) {
+                             fine.tune.thres,genes,sd.thres,mean_mat,
+                             numCores = SingleR.numCores) {
   N = dim(sc_data)[2]
-  numCores = min(detectCores(all.tests = FALSE, logical = TRUE)-1,16)
   print(paste("Fine-tuning round on top cell types (using", numCores, 
               "CPU cores):"))
   labels = pbmclapply(1:N,FUN=function(i){
@@ -295,12 +297,14 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
 #' @param fine.tune.thres the fine tuning step performs the scoring procedure for the top scoring labels using only genes that vary between those cell types in the reference data set. The top labels are those with a score lower than the top score by less than fine.tune.thres
 #' @param sd.thres if genes=='sd' then this is the threshold for defining a variable gene.
 #' @param do.pvals compute chi-squared outlier test p-values
+#' @param numCores Number of cores to use.
 #'
 #' @return a list with the labels and scores
 SingleR <- function(method = "single", sc_data, ref_data, types, 
                     clusters = NULL, genes = "de", quantile.use = 0.8, 
                     p.threshold = 0.05, fine.tune = TRUE, 
-                    fine.tune.thres = 0.05,sd.thres=1, do.pvals = T) {
+                    fine.tune.thres = 0.05,sd.thres=1, do.pvals = T, 
+                    numCores = SingleR.numCores) {
   rownames(ref_data) = tolower(rownames(ref_data))
   rownames(sc_data) = tolower(rownames(sc_data))
   A = intersect(rownames(ref_data),rownames(sc_data))
@@ -362,14 +366,15 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
     return(0)
   }
   output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use)
-  if (do.pvals == T)
-    output$pval = apply(output$scores, 1,function(x) chisq.out.test(x)$p.value)
+  if (do.pvals == T) {
+    output$pval = SingleR.ConfidenceTest(output$scores)
+  }
   
   # second round with top labels
   if (fine.tune==TRUE & length(unique(types)) > 2) {
     labels = SingleR.FineTune(sc_data,ref_data,types,output$scores,
                               quantile.use,fine.tune.thres,genes = genes,
-                              sd.thres,mat)
+                              sd.thres,mat,numCores = numCores)
     output$labels1 = as.matrix(output$labels)
     output$labels = as.matrix(labels)
     output$labels1.thres = c(output$labels)
@@ -387,6 +392,17 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
   output$method = method
   
   return (output)
+}
+
+#' Test confidence of SingleR annotation.
+#'
+#' Calculates outliers chisquare-test for the cell typres scores for each cell.
+#'    
+#' @param scores a SingleR scores matrix
+#' 
+#' @return vector of p-values
+SingleR.ConfidenceTest = function(scores) {
+  apply(scores, 1,function(x) chisq.out.test(x)$p.value)
 }
 
 #' Plot a scatter plot of a single cell vs. a reference sample
@@ -707,11 +723,11 @@ SingleR.PlotFeature = function(SingleR,seurat, plot.feature='MaxScore',
 #' @param species (\code{"Mouse"} or \code{"Human"})
 #' @param signatures a GeneSetCollection object, or NULL to use default signatures
 #' @param n.break run ssGSEA for n.break at a time.
-
+#' @param numCores Number of cores to use.
 #'
 #' @return scores for each signature and single cell
 calculateSignatures = function(sc_data,species='Human',signatures=NULL, 
-                               n.break=1000) {
+                               n.break=1000, numCores = SingleR.numCores) {
   #data('signatures')
   if(is.null(signatures)) {
     if (species=="Human") {
@@ -725,7 +741,6 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL,
   
   sc_data = as.matrix(sc_data)
   rownames(sc_data) = tolower(rownames(sc_data))
-  numClusters = min(detectCores(all.tests = FALSE, logical = TRUE)-1,4)
   # break to groups of n.break cells
   scores = matrix(NA,length(egc),ncol(sc_data))
   wind = seq(1,ncol(sc_data),by=n.break)
@@ -733,7 +748,7 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL,
   for (i in wind) {
     last = min(ncol(sc_data),i+n.break-1)
     a = gsva(sc_data[,i:last],egc,method='ssgsea',ssgsea.norm=F,
-             parallel.sz=numClusters,parallel.type='FORK')
+             parallel.sz=numCores,parallel.type='FORK')
     scores[,i:last] = a
   }
   mmin = rowMins(scores)
@@ -956,11 +971,13 @@ CreateVariableGeneSet = function(ref_data,types,n) {
 #' @param variable.genes variable gene method to use - 'sd' or 'de'. Default is 'de'.
 #' @param fine.tune perform fine tuning. Default is TRUE. Fine-tuning may take long to run.
 #' @param do.main.types if TRUE runs a main cell type annotation using the main_types annotation.
+#' @param numCores Number of cores to use.
 #'
 #' @return a SingleR object object
 SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                                  citation='-',technology='-',variable.genes='sd',
-                                 fine.tune=T,do.main.types=T) {
+                                 fine.tune=T,do.main.types=T,
+                                 numCores = SingleR.numCores) {
   types = ref$types
   
   print(paste0('Annotating data with ',ref$name,'...'))
@@ -981,7 +998,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
   
   SingleR.single = SingleR("single",sc.data,ref$data,types=types,
                            sd.thres = ref$sd.thres,genes = variable.genes,
-                           fine.tune = fine.tune)
+                           fine.tune = fine.tune,numCores = numCores)
   
   SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
   
@@ -993,7 +1010,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                              clusters = factor(clusters),
                              sd.thres = ref$sd.thres,
                              genes = variable.genes,
-                             fine.tune = fine.tune)
+                             fine.tune = fine.tune,numCores = numCores)
   
   about = list(Organism = capitalize(species),Citation=citation,
                Technology = technology,RefData=ref$name)
@@ -1009,14 +1026,15 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                                           types=types,sd.thres = ref$sd.thres, 
                                           quantile.use = 0.8, 
                                           genes = variable.genes.main,
-                                          fine.tune = fine.tune)
+                                          fine.tune = fine.tune,
+                                          numCores = numCores)
     singler$SingleR.single.main$clusters = 
       SingleR.Cluster(singler$SingleR.single.main,10)
     singler$SingleR.clusters.main = 
       SingleR("cluster",sc.data,ref$data,types=types, 
               clusters=factor(clusters),sd.thres = ref$sd.thres, 
               quantile.use = 0.8,genes = variable.genes.main,
-              fine.tune = fine.tune)
+              fine.tune = fine.tune,numCores = numCores)
   }
   
   if (!(ref$name %in% c('Immgen','RNAseq','HPCA','Blueprint_Encode',
@@ -1173,6 +1191,7 @@ ReadSingleCellData = function(counts,annot) {
 #' @param do.main.types run the SingleR pipeline for main cell types (cell types grouped together) as well.
 #' @param reduce.seurat.object if TRUE removes the raw data and other high memory objects from the Seurat object.
 #' @param temp.dir used by the SingleR web app.
+#' @param numCores Number of cores to use.
 #'
 #' @return a SingleR object containing a Seurat object
 CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
@@ -1183,7 +1202,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
                                      reduce.file.size=T,do.signatures=T,
                                      min.cells=2,npca=10,regress.out='nUMI',
                                      do.main.types=T,reduce.seurat.object=T,
-                                     temp.dir=NULL) {
+                                     temp.dir=NULL, numCores = SingleR.numCores) {
   print(project.name)
   print('Reading single-cell data...')
   sc.data = ReadSingleCellData(counts,annot)
@@ -1214,7 +1233,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
                                 normalize.gene.length,variable.genes,
                                 fine.tune,do.signatures,
                                 seurat@ident,do.main.types,
-                                reduce.file.size,temp.dir)
+                                reduce.file.size,temp.dir,numCores = numCores)
   
   singler$seurat = seurat 
   singler$meta.data$xy = seurat@dr$tsne@cell.embeddings
@@ -1241,6 +1260,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
 #' @param do.main.types run the SingleR pipeline for main cell types (cell types grouped together) as well.
 #' @param reduce.file.size remove less used SingleR fields that increase the object size.
 #' @param temp.dir used by the SingleR webtool.
+#' @param numCores Number of cores to use.
 #'
 #' @return a SingleR object
 CreateSinglerObject = function(counts,annot=NULL,project.name,
@@ -1250,7 +1270,7 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,
                                variable.genes='de',fine.tune=T,
                                do.signatures=T,clusters=NULL,
                                do.main.types=T,reduce.file.size=T,
-                               temp.dir=NULL) {
+                               temp.dir=NULL,numCores = SingleR.numCores) {
   
   sc.data = ReadSingleCellData(counts,annot)
   
@@ -1285,12 +1305,12 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,
                                       citation,technology,
                                       do.main.types=do.main.types,
                                       variable.genes=variable.genes,
-                                      fine.tune=fine.tune),
+                                      fine.tune=fine.tune,numCores = numCores),
                  SingleR.CreateObject(sc.data.gl,mouse.rnaseq,clusters,
                                       species,citation,technology,
                                       do.main.types=do.main.types,
                                       variable.genes=variable.genes,
-                                      fine.tune=fine.tune)
+                                      fine.tune=fine.tune,numCores = numCores)
       )
     } else if (species == 'Human') {
       #if(!exists('hpca'))
@@ -1301,18 +1321,19 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,
                                       citation,technology,
                                       do.main.types = do.main.types,
                                       variable.genes=variable.genes,
-                                      fine.tune=fine.tune),
+                                      fine.tune=fine.tune,numCores = numCores),
                  SingleR.CreateObject(sc.data.gl,blueprint_encode,
                                       clusters,species,citation,technology,
                                       do.main.types = do.main.types,
                                       variable.genes=variable.genes,
-                                      fine.tune=fine.tune))
+                                      fine.tune=fine.tune,numCores = numCores))
     }
   } else {
     res = lapply(ref.list, FUN=function(x) {
       SingleR.CreateObject(sc.data.gl,x,clusters,species,citation,technology,
                            do.main.types=do.main.types,
-                           variable.genes=variable.genes,fine.tune=fine.tune)
+                           variable.genes=variable.genes,fine.tune=fine.tune,
+                           numCores = numCores)
     })
   }
   

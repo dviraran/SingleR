@@ -9,7 +9,8 @@
 \usage{
 SingleR(method = "single", sc_data, ref_data, types, clusters = NULL,
   genes = "de", quantile.use = 0.8, p.threshold = 0.05,
-  fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1, do.pvals = T)
+  fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1, do.pvals = T,
+  numCores = SingleR.numCores)
 }
 \arguments{
 \item{method}{annotating each single-cell or as a group by cluster: (\code{"single"} or \code{"cluster"})}
@@ -35,6 +36,8 @@ SingleR(method = "single", sc_data, ref_data, types, clusters = NULL,
 \item{sd.thres}{if genes=='sd' then this is the threshold for defining a variable gene.}
 
 \item{do.pvals}{compute chi-squared outlier test p-values}
+
+\item{numCores}{Number of cores to use.}
 }
 \value{
 a list with the labels and scores
