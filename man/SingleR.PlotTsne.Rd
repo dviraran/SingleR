@@ -5,9 +5,9 @@
 \title{Plot a colored tSNE plot according to a set of labels}
 \usage{
 SingleR.PlotTsne(SingleR, xy, labels = SingleR$labels, score.thres = 0,
-  clusters = NULL, do.letters = TRUE, dot.size = 1, do.labels = FALSE,
-  do.legend = TRUE, label.size = 3, title = "", colors = singler.colors,
-  font.size = NULL, alpha = 0.5)
+  clusters = NULL, do.letters = TRUE, dot.size = 1,
+  do.labels = FALSE, do.legend = TRUE, label.size = 3, title = "",
+  colors = singler.colors, font.size = NULL, alpha = 0.5)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}

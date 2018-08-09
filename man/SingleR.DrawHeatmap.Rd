@@ -5,8 +5,8 @@
 \title{Plot a heatmap of the scores for all the single cells}
 \usage{
 SingleR.DrawHeatmap(SingleR, cells.use = NULL, types.use = NULL,
-  clusters = NULL, top.n = 40, normalize = T, order.by.clusters = F,
-  cells_order = NULL, silent = F, ...)
+  clusters = NULL, top.n = 40, normalize = T,
+  order.by.clusters = F, cells_order = NULL, silent = F, ...)
 }
 \arguments{
 \item{SingleR}{the output from the SingleR function}

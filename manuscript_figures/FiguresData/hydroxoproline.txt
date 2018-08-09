@@ -1,1 +1,27 @@
-	Group	Valuer1	Control	0.9782733r2	Control	1.076287r3	Control	1.017594r4	Control	0.9317778r5	Control	1.175808r6	Control	0.8640158r7	Control	0.9582123r1	Bleomycin	2.018397r2	Bleomycin	1.614287r3	Bleomycin	1.452772r4	Bleomycin	1.779103r5	Bleomycin	1.769703r6	Bleomycin	1.733676r7	Bleomycin	1.975303r1	CX3CR1 Bleomycin	1.368248r2	CX3CR1 Bleomycin	1.05921r3	CX3CR1 Bleomycin	1.657723r4	CX3CR1 Bleomycin	0.992062r5	CX3CR1 Bleomycin	1.256704r6	CX3CR1 Bleomycin	1.525813r7	CX3CR1 Bleomycin	1.281802
+replicate	Type	Value	Tamoxifen	Bleomycin	Group
+r1	WT	0.9782733	No tamoxifen	Control	1
+r2	WT	1.076287	No tamoxifen	Control	1
+r3	WT	1.017594	No tamoxifen	Control	1
+r4	WT	0.9317778	No tamoxifen	Control	1
+r5	WT	1.175808	No tamoxifen	Control	1
+r6	WT	0.8640158	No tamoxifen	Control	1
+r7	WT	0.9582123	No tamoxifen	Control	1
+r1	WT	2.018397	Tamoxifen	Bleomycin	2
+r2	WT	1.614287	Tamoxifen	Bleomycin	2
+r3	WT	1.452772	Tamoxifen	Bleomycin	2
+r4	WT	1.779103	Tamoxifen	Bleomycin	2
+r5	WT	1.769703	Tamoxifen	Bleomycin	2
+r6	WT	1.733676	Tamoxifen	Bleomycin	2
+r7	WT	1.975303	Tamoxifen	Bleomycin	2
+r1	DTA	1.368248	Tamoxifen	Bleomycin	3
+r2	DTA	1.05921	Tamoxifen	Bleomycin	3
+r3	DTA	1.657723	Tamoxifen	Bleomycin	3
+r4	DTA	0.992062	Tamoxifen	Bleomycin	3
+r5	DTA	1.256704	Tamoxifen	Bleomycin	3
+r6	DTA	1.525813	Tamoxifen	Bleomycin	3
+r7	DTA	1.281802	Tamoxifen	Bleomycin	3
+r1	DTA	0.935901947	No tamoxifen	Control	1
+r2	DTA	1.153369907	No tamoxifen	Control	1
+r3	DTA	0.728128249	No tamoxifen	Control	1
+r1	DTA	1.73375561	No tamoxifen	Bleomycin	2
+r2	DTA	1.836348664	No tamoxifen	Bleomycin	2

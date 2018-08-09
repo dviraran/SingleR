@@ -173,7 +173,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
   
   if (typeof(genes)=='list') {
     utypes = unique(types)
-    n = round(1000*(2/3)^(log2(c(ncol(mat)))))
+    n = round(500*(2/3)^(log2(c(ncol(mat)))))
     genes.filtered = unique(unlist(unlist(lapply(utypes,function(j) 
       lapply(utypes, function(i) genes[[i]][[j]][1:n])))))
     genes.filtered = intersect(genes.filtered,rownames(mat))

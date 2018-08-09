@@ -3,7 +3,6 @@
 \docType{data}
 \name{human.egc}
 \alias{human.egc}
-\alias{human.egc}
 \title{Human signatures}
 \format{A GeneSetCollection of 5 signatures}
 \usage{

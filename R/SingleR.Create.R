@@ -268,7 +268,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
                                      species='Human',citation='',
                                      ref.list=list(),normalize.gene.length=F,
                                      variable.genes='de',fine.tune=T,
-                                     reduce.file.size=T,do.signatures=T,
+                                     reduce.file.size=T,do.signatures=F,
                                      min.cells=2,npca=10,regress.out='nUMI',
                                      do.main.types=T,reduce.seurat.object=T,
                                      temp.dir=NULL, numCores = SingleR.numCores) {
@@ -337,7 +337,7 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,
                                species='Human',citation='',
                                ref.list=list(),normalize.gene.length=F,
                                variable.genes='de',fine.tune=T,
-                               do.signatures=T,clusters=NULL,
+                               do.signatures=F,clusters=NULL,
                                do.main.types=T,reduce.file.size=T,
                                temp.dir=NULL,numCores = SingleR.numCores) {
   
@@ -439,28 +439,38 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,
 Combine.Multiple.10X.Datasets = function(dirs,random.sample=0,min.genes=500) {
   print(paste(1,basename(dirs[1])))
   sc.data = as.matrix(Read10X(dirs[1]))
-  orig.ident = rep(basename(dirs[1]),ncol(sc.data))
   
-  if (random.sample>0) {
-    A = colSums(as.matrix(sc.data)>0)
-    use = sample(which(A>min.genes),random.sample)
-    sc.data = sc.data[,use]
-    orig.ident = orig.ident[use]
+  A = colSums(as.matrix(sc.data)>0)>min.genes
+  if(sum(A)>0) {
+    sc.data = sc.data[,A]
+    if (random.sample>0) {
+      use = sample(ncol(sc.data),min(random.sample,ncol(sc.data)))
+      sc.data = sc.data[,use]
+    } 
+    orig.ident = rep(basename(dirs[1]),ncol(sc.data))
+  } else {
+    print('No cells with nGene > min.genes')
+    orig.ident = c()
+    sc.data = c()
   }
-  
   for (j in 2:length(dirs)) {
     print(paste(j,basename(dirs[j])))
     data <- Read10X(dirs[j])
-    ident = rep(basename(dirs[j]),ncol(data))
-    if (random.sample>0) {
-      A = colSums(as.matrix(data)>0)
-      use = sample(which(A>min.genes),random.sample)
-      data = data[,use]
-      ident = ident[use]
-    }
     
-    orig.ident = c(orig.ident,ident)
-    sc.data = cbind(sc.data,data)
+    A = colSums(as.matrix(data)>0)>min.genes
+    if(sum(A)>0) {
+      
+      data = data[,A]
+      
+      if (random.sample>0) {
+        use = sample(ncol(data),min(random.sample,ncol(data)))
+        data = data[,use]
+      }
+      orig.ident = c(orig.ident,rep(basename(dirs[j]),ncol(data)))
+      sc.data = cbind(sc.data,data)
+    } else {
+      print('No cells with nGene > min.genes')
+    }
   }
   
   colnames(sc.data) = make.unique(colnames(sc.data))

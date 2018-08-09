@@ -4,8 +4,8 @@
 \alias{SingleR.Combine}
 \title{Combining SingleR objects together to one object.}
 \usage{
-SingleR.Combine(singler.list, order = NULL, clusters = NULL, expr = NULL,
-  xy = NULL)
+SingleR.Combine(singler.list, order = NULL, clusters = NULL,
+  expr = NULL, xy = NULL)
 }
 \arguments{
 \item{singler.list}{a list of SingleR objects}

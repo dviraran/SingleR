@@ -3,14 +3,13 @@
 \docType{package}
 \name{SingleR}
 \alias{SingleR}
-\alias{SingleR}
 \alias{SingleR-package}
 \title{The main SingleR function}
 \usage{
 SingleR(method = "single", sc_data, ref_data, types, clusters = NULL,
   genes = "de", quantile.use = 0.8, p.threshold = 0.05,
-  fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1, do.pvals = T,
-  numCores = SingleR.numCores)
+  fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1,
+  do.pvals = T, numCores = SingleR.numCores)
 }
 \arguments{
 \item{method}{annotating each single-cell or as a group by cluster: (\code{"single"} or \code{"cluster"})}
@@ -44,6 +43,4 @@ a list with the labels and scores
 }
 \description{
 Given single-cell RNAseq data and reference dataset the function returns the best annotation for each single-cell.
-
-SingleR: A package for reference-based single-cell RNA-seq annotation
 }

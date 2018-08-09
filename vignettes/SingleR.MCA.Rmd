@@ -1,0 +1,67 @@
+---
+title: "Analyzing big single-cell data"
+author: "Dvir Aran"
+date: "7/19/2018"
+output: html_document
+bibliography: Citations.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SingleR)
+library(ggplot2)
+library(plotly)
+path.data = '~/Documents/SingleR/package/SingleR/manuscript_figures/FiguresData/'
+```
+
+## Analyzing a big data file with SingleR
+
+A common single-cell RNA-seq experiments now yields many thousands of cells. The *SingleR* current implementation requires reading the whole count matrix to the memory. This is many time impossible.
+
+Below we describe our analysis of the mouse cell atlas (MCA) single-cell data [@Han2018]. This dataset contains 250,000 cells. We run *SingleR* on 20,000 cells each time, and in the end combine of the objects together.
+
+We started by following the excellent Seurat tutorial for analyzing the MCA data  <https://satijalab.org/seurat/mca.html>. After the analysis was performed we save the Seurat object mca.rds.
+
+```{r eval=FALSE}
+load ('~/GSE108097/mca.rds')
+
+sc.datasets <- list.files('~/GSE108097/', pattern='dge')
+
+s = seq(1,length(mca@cell.names),by=20000)
+for (i in s) {
+  print(i)
+  A = seq(i,min(i+20000-1,length(mca@cell.names)))
+  annot=mca@meta.data$Tissue[A]
+  names(annot) = rownames(mca@meta.data)[A]
+  
+  singler = CreateSinglerObject(mca@raw.data[,A], annot = annot, project.name='MCA', 
+                                min.genes = 0,  technology = "Microwell-Seq", 
+                                species = "Mouse", citation = "Han et al. 2018",
+                                do.signatures = F, clusters = mca@ident[A])
+
+  save(singler,file=paste0('~/GSE108097/SingleR/singler.mca.',i,'.RData'))
+}
+
+singler.objects.file <- list.files('~/GSE108097/SingleR/', 
+                                   pattern='RData',full.names=T)
+
+singler.objects = lapply(singler.objects.file,FUN=function(x) load(x))
+
+singler = SingleR.Combine(singler.objects,order = mca@cell.names,
+                          clusters=mca@ident,xt=mca@dr$tsne@cell.embeddings)
+```
+
+This SingleR object is fully functional, but quite big for analysis. We created a small data frame only with the annotations and the tSNE coordinates: 
+
+```{r fig.height=10,fig.width=10,fig.align='center'}
+load(file.path(path.data,'mca.singler.rds'))
+print(colnames(mca.singler))
+mca.singler$labels = paste(Main.Types,Types,Orig.Ident,sep='/')
+p = ggplot(mca.singler)+geom_point(aes(x=FItSNE_1,y=FItSNE_2,color=Main.Types,
+                                       labels=labels),size=0.1,alpha=0.5)+
+  guides(color=guide_legend(override.aes = list(size=2,alpha=1)))
+ggplotly(p)
+```
+
+
+

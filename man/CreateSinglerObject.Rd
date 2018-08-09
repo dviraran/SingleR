@@ -4,11 +4,12 @@
 \alias{CreateSinglerObject}
 \title{Wrapper function to create a SingleR object}
 \usage{
-CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
-  technology = "10X", species = "Human", citation = "",
-  ref.list = list(), normalize.gene.length = F, variable.genes = "de",
-  fine.tune = T, do.signatures = T, clusters = NULL, do.main.types = T,
-  reduce.file.size = T, temp.dir = NULL, numCores = SingleR.numCores)
+CreateSinglerObject(counts, annot = NULL, project.name,
+  min.genes = 500, technology = "10X", species = "Human",
+  citation = "", ref.list = list(), normalize.gene.length = F,
+  variable.genes = "de", fine.tune = T, do.signatures = F,
+  clusters = NULL, do.main.types = T, reduce.file.size = T,
+  temp.dir = NULL, numCores = SingleR.numCores)
 }
 \arguments{
 \item{counts}{a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.}

@@ -15,7 +15,7 @@ SingleR.DrawScatter = function(sc_data, cell_id, ref,sample_id) {
   ggplot(df,aes(x=x, y=y)) + geom_point(size=0.5,alpha=0.5,color='blue') +
     geom_smooth(method='lm',color='red')+
     theme(legend.position="none") + xlab('Single cell') + ylab('Reference sample') +
-    ggtitle(paste('R =', round(1000*cor(df$x,df$y,method='spearman'))/1000)) + 
+    ggtitle(paste('R =', round(1000*cor(df$x,df$y,method='spearman',use='pairwise'))/1000)) + 
     theme_classic()
 }
 
