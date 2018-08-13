@@ -131,7 +131,24 @@ $(document).ready(function () {
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
 <p>SingleR is a package that performs reference-based annotation of single-cell RNA-seq data. Here we show different ways to create SingleR objects. These objects can then be used with visualization functions available in the SingleR package and the SingleR web app (<a href="http://comphealth.ucsf.edu/SingleR/" class="uri">http://comphealth.ucsf.edu/SingleR/</a>).</p>
-<p>SingleR provides built-in wrapper functions to run a complete pipeline with one function. SingleR provides support to Seurat (<a href="http://satijalab.org/seurat/" class="uri">http://satijalab.org/seurat/</a>), but any other scRNA-seq package can be used.</p>
+</div>
+<div id="basic-singler-function" class="section level2">
+<h2>Basic SingleR function</h2>
+<p>SingleR provides built-in wrapper functions to run a complete pipeline with one function. SingleR provides support to Seurat (<a href="http://satijalab.org/seurat/" class="uri">http://satijalab.org/seurat/</a>), but any other scRNA-seq package can be used. These functions are explained in Case 1 and 2. These functions assist in reading the single-cell data, calculating labels using different references and creating an object that can be used by SungleR plotting functions. However, to run SingleR and retrieve labels for each cell the following function can be used:</p>
+<pre class="r"><code>singler = SingleR(method = &quot;single&quot;, sc_data, ref_data, types, clusters = NULL,
+  genes = &quot;de&quot;, quantile.use = 0.8, p.threshold = 0.05,
+  fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1,
+  do.pvals = T, numCores = SingleR.numCores)</code></pre>
+<ul>
+<li>method can be ‘single’ or ‘cluster’. ‘cluster’ will annotate each cluster instead of each single cell. The cluster expression is the average of the expression of all the cells in the given cluster. If ‘cluster’ than ids must be given in the ‘clusters’ parameters.</li>
+<li>sc_data is the single cell matrix. If the data is from full-length method than the counts must be normalized to gene length (this can be achieved by using the built-in TPM function).</li>
+<li>ref_data is the reference expression matrix. If using one of the built-in reference datasets than will be ref$data (ref is the reference dataset object). The built-in references are immgen or mouse.rnaseq (for mouse) and blueprint_encode or hpca (for human). See below for creating a new reference dataset.</li>
+<li>types is a vector of labels for each reference sample. If using one of the built-in reference datasets than will be ref<span class="math inline">\(types or ref\)</span>main_types (ref is the reference dataset object).</li>
+<li>genes can be ‘de’, ‘sd’ or a set of genes, see supplementary information 1 for more details.</li>
+<li>fine.tune is TRUE runs fine-tuning. This process may take very long.</li>
+<li>fine.tune.thres is the threshold to use for choosing top cell types for each fine-tuning iteration. Reducing this parameter will make the fine-tuning process run faster.</li>
+</ul>
+<p>This is the basic SingleR function. To use wrapper functions see the cases below.</p>
 </div>
 <div id="case-1-counts-data-no-previous-analysis" class="section level2">
 <h2>Case 1: Counts data, no previous analysis</h2>
@@ -142,7 +159,7 @@ $(document).ready(function () {
   ref.list = list(), normalize.gene.length = F, variable.genes = &quot;de&quot;,
   fine.tune = T, reduce.file.size = T, do.signatures = T, min.cells = 2,
   npca = 10, regress.out = &quot;nUMI&quot;, do.main.types = T,
-  reduce.seurat.object = T)
+  reduce.seurat.object = T, numCores = SingleR.numCores)
 save(singler,file='singler_object.RData')</code></pre>
 <ul>
 <li>counts.file may be a tab delimited text file (with the prefix ‘.txt’), a matrix of the counts or a 10X directory. Importantly, the rownames must be gene symbols. To combine multiple 10X datasets we provide the function Combine.Multiple.10X.Datasets.</li>
@@ -154,7 +171,9 @@ save(singler,file='singler_object.RData')</code></pre>
 <li>fine.tune - performs the fine-tuning step. This step may take long for big datasets, but can improve results significantly if the data contains subtle differences.</li>
 <li>do.signatures - this step runs a single-sample gene set enrichment analysis (ssGSEA) for a set of predefined signatures (see the object human.egc or mouse.egc). This step may also take long, and can be set to FALSE to shorten computation time.</li>
 <li>min.cells, npca and regress.out are all passed directly to Seurat to create a Seurat object.</li>
+<li>do.main.types - compute the main types scores as well.</li>
 <li>reduce.seurat.object - removes the raw.data and calc.params from the Seurat object. The size of the object will be significantly smaller (~10-fold).</li>
+<li>numCores - number of cores to use in parallel. The default is the number of cores in the system minus 1.</li>
 </ul>
 <p>The returned singler object is a list that can be used for further analyses. See below.</p>
 </div>
@@ -165,7 +184,8 @@ save(singler,file='singler_object.RData')</code></pre>
 <pre class="r"><code>singler = CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
   technology = &quot;10X&quot;, species = &quot;Human&quot;, citation = &quot;&quot;,
   ref.list = list(), normalize.gene.length = F, variable.genes = &quot;de&quot;,
-  fine.tune = T, do.signatures = T, clusters = NULL)
+  fine.tune = T, do.signatures = T, clusters = NULL, do.main.types = T, 
+  reduce.file.size = T, numCores = SingleR.numCores)
 
 singler$seurat = seurat.object # (optional)
 singler$meta.data$orig.ident = seurat.objectsingler@meta.data$orig.ident # the original identities, if not supplied in 'annot'

@@ -13,7 +13,28 @@ knitr::opts_chunk$set(echo = TRUE)
 
 SingleR is a package that performs reference-based annotation of single-cell RNA-seq data. Here we show different ways to create SingleR objects. These objects can then be used with visualization functions available in the SingleR package and the SingleR web app (<http://comphealth.ucsf.edu/SingleR/>). 
 
-SingleR provides built-in wrapper functions to run a complete pipeline with one function. SingleR provides support to Seurat (<http://satijalab.org/seurat/>), but any other scRNA-seq package can be used.
+
+
+## Basic SingleR function
+
+SingleR provides built-in wrapper functions to run a complete pipeline with one function. SingleR provides support to Seurat (<http://satijalab.org/seurat/>), but any other scRNA-seq package can be used. These functions are explained in Case 1 and 2. These functions assist in reading the single-cell data, calculating labels using different references and creating an object that can be used by SungleR plotting functions. However, to run SingleR and retrieve labels for each cell the following function can be used:
+
+```{r eval=FALSE,echo=TRUE}
+singler = SingleR(method = "single", sc_data, ref_data, types, clusters = NULL,
+  genes = "de", quantile.use = 0.8, p.threshold = 0.05,
+  fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1,
+  do.pvals = T, numCores = SingleR.numCores)
+```
+
+  - method can be 'single' or 'cluster'. 'cluster' will annotate each cluster instead of each single cell. The cluster expression is the average of the expression of all the cells in the given cluster. If 'cluster' than ids must be given in the 'clusters' parameters. 
+  - sc_data is the single cell matrix. If the data is from full-length method than the counts must be normalized to gene length (this can be achieved by using the built-in TPM function).
+  - ref_data is the reference expression matrix. If using one of the built-in reference datasets than will be ref$data (ref is the reference dataset object). The built-in references are immgen or mouse.rnaseq (for mouse) and blueprint_encode or hpca (for human). See below for creating a new reference dataset. 
+  - types is a vector of labels for each reference sample. If using one of the built-in reference datasets than will be ref$types or ref$main_types (ref is the reference dataset object).
+  - genes can be 'de', 'sd' or a set of genes, see supplementary information 1 for more details.
+  - fine.tune is TRUE runs fine-tuning. This process may take very long.
+  - fine.tune.thres is the threshold to use for choosing top cell types for each fine-tuning iteration. Reducing this parameter will make the fine-tuning process run faster.
+  
+This is the basic SingleR function. To use wrapper functions see the cases below.
 
 ## Case 1: Counts data, no previous analysis
 
