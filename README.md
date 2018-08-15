@@ -37,6 +37,8 @@ For more details about the SingleR method see [SingleR Supplementary Information
 
 For examples of SingleR usage see [SingleR Supplementary Information 2](http://comphealth.ucsf.edu/sample-apps/SingleR/SupplementaryInformation2.html).
 
+The fine-tuning process of SingleR may take very long, and in the current setting is not feasible for large datasets. Thus, for datasets with tens of thousands of cells it is recommended to run SingleR on subsets of the full data and then combine them together. See an example of analyzing 242,533 from the [Microwell-Seq Mouse Cell Atlas](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR.MCA.html).
+
 # Contributors
 
 SingleR was developed by Dvir Aran. Please contact Dvir Aran: dvir.aran at ucsf edu for any questions or suggestions.
