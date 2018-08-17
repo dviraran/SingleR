@@ -467,7 +467,8 @@ Combine.Multiple.10X.Datasets = function(dirs,random.sample=0,min.genes=500) {
         data = data[,use]
       }
       orig.ident = c(orig.ident,rep(basename(dirs[j]),ncol(data)))
-      sc.data = cbind(sc.data,data)
+      g = intersect(rownames(sc.data),rownames(data))
+      sc.data = cbind(sc.data[g,],data[g,])
     } else {
       print('No cells with nGene > min.genes')
     }

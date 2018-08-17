@@ -202,15 +202,27 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, score.thres=0,
     df$ident = labels
   }
   
+  SYMBOLS = c(LETTERS,letters,c(0:9),
+              c("!","@","#","$","%","^","&","*","(",")",")","-",
+                "+","_","=",";","/","|","{","}","~"))
+
   if (score.thres>0) {
     max.score = apply(SingleR$scores,1,max)  
     df$ident[max.score<score.thres] = 'X'
   }
+  
+  if (do.letters==T && length(unique(df$ident))>length(SYMBOLS)) {
+    n = table(df$ident)
+    thres = sort(n,decreasing = T)[length(SYMBOLS)]
+    df$ident[df$ident %in% names(n)[n <= thres]] = 'X'
+  }
+  
   df$ident = factor(df$ident)
-  SYMBOLS = c(LETTERS,tolower(letters),c(0:9))
+
+  num.levels = length(levels(df$ident))
+  
   df$initIdent = SYMBOLS[as.numeric(df$ident)]
   
-  num.levels = length(levels(df$ident))
   
   p = ggplot(df, aes(x = x, y = y))
   
