@@ -107,13 +107,24 @@ fineTuningRound = function(topLabels,types,ref_data,genes,mat,sd.thres,
 #' @param genes the list of genes to use.
 #' @param types a list of cell type names corresponding to ref_data. Number of elements in types must be equal to number of columns in ref_data
 #' @param quantile.use correlation coefficients are aggregated for multiple cell types in the reference data set. This parameter allows to choose how to sort the cell types scores, by median (0.5) or any other number between 0 and 1. The default is 0.9.
+#' @param step number of cells in each correlation analysis. The correlation analysis memory requirements may be too high, thus it can be split to smaller sets.
 #'
 #' @return a list with the scores, the raw correlation coefficients and the top labels
-SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use) {
+SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,step=10000) {
   sc_data = as.matrix(sc_data[genes,])
   ref_data = as.matrix(ref_data[genes,])
-  r=cor(sc_data,ref_data,method='spearman')
   
+  if (nrow(sc_data)>step) {
+    n = row(sc_data)
+    s = seq(step+1,n,by=step)
+    r=cor(sc_data[,1:step],ref_data,method='spearman')
+    for (i in 1:length(s)) {
+      A = seq(s[i],min(s[i]+step-1,n))
+      r=cbind(r,cor(sc_data[,A],ref_data,method='spearman'))
+    }
+  } else {
+    r=cor(sc_data,ref_data,method='spearman')
+  }
   agg_scores = quantileMatrix(r,types,quantile.use);
   #agg_scores = aggregate(t(r)~types,FUN = quantile, probs  = quantile.use)
   labels = colnames(agg_scores)[max.col(agg_scores)]
