@@ -332,14 +332,15 @@ SingleR.Cluster = function(SingleR,num.clusts=10,normalize_rows=F,
     SingleR$scores = scale(SingleR$scores)
   }
   if (normalize_cols==T) {
-    scores = t(scale(t(SingleR$scores^5)))
+    scores = t(scale(t(SingleR$scores^3)))
   } else {
     scores = SingleR$scores
   }
-  r <- cor(t(scores), method="pearson")
-  d <- as.dist(1-r)
-  hc = hclust(d,method='ward.D2')
-  #hc = hclust(dist(scores,method='euclidean'),method='ward.D2')
+  #r <- cor(t(scores), method="pearson")
+  #d <- as.dist(1-r)
+  #hc = hclust(d,method='ward.D2')
+  hc = hclust(dist(scores,method='euclidean'),method='ward.D2')
+  
   cl = cutree(hc,k=num.clusts)
   list(hc=hc,cl=factor(cl))
 }
@@ -348,9 +349,10 @@ SingleR.Cluster = function(SingleR,num.clusts=10,normalize_rows=F,
 #'
 #' @param singler as SingleR object
 #' @param subsetdata a logical vector of single-cells to include in the subset object
+#' @param rerun.seurat if TRUE reruns the Seurat analyses for the subset data.
 #'
 #' @return a subset of the original SingleR vector
-SingleR.Subset = function(singler,subsetdata) {
+SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
   s = singler
   
   if (!is.null(s$seurat)) {
@@ -368,8 +370,10 @@ SingleR.Subset = function(singler,subsetdata) {
       s$singler[[i]]$SingleR.single$scores[subsetdata,]
     s$singler[[i]]$SingleR.single$labels = 
       as.matrix(s$singler[[i]]$SingleR.single$labels[subsetdata,])
-    s$singler[[i]]$SingleR.single$labels1 = 
-      as.matrix(s$singler[[i]]$SingleR.single$labels1[subsetdata,])
+    if (!is.null(s$singler[[i]]$SingleR.single$labels1)) {
+      s$singler[[i]]$SingleR.single$labels1 = 
+        as.matrix(s$singler[[i]]$SingleR.single$labels1[subsetdata,])
+    }
     s$singler[[i]]$SingleR.single$clusters$cl = 
       s$singler[[i]]$SingleR.single$clusters$cl[subsetdata]
     
@@ -382,8 +386,10 @@ SingleR.Subset = function(singler,subsetdata) {
         s$singler[[i]]$SingleR.single.main$scores[subsetdata,]
       s$singler[[i]]$SingleR.single.main$labels = 
         as.matrix(s$singler[[i]]$SingleR.single.main$labels[subsetdata,])
-      s$singler[[i]]$SingleR.single.main$labels1 = 
-        as.matrix(s$singler[[i]]$SingleR.single.main$labels1[subsetdata,])
+      if (!is.null(s$singler[[i]]$SingleR.single.main$labels1)) {
+        s$singler[[i]]$SingleR.single.main$labels1 = 
+          as.matrix(s$singler[[i]]$SingleR.single.main$labels1[subsetdata,])
+      }
       s$singler[[i]]$SingleR.single.main$clusters$cl = 
         s$singler[[i]]$SingleR.single.main$clusters$cl[subsetdata]
       
@@ -402,6 +408,25 @@ SingleR.Subset = function(singler,subsetdata) {
     s$meta.data$xy = s$meta.data$xy[subsetdata,]
     s$meta.data$clusters = factor(as.character(
       s$meta.data$clusters[subsetdata]))
+  }
+  
+  if (rerun.seurat==T) {
+    s$seurat <- FindVariableGenes(object = s$seurat, mean.function = ExpMean,
+                            dispersion.function = LogVMR,
+                            x.low.cutoff = 0.0125, x.high.cutoff = 3,
+                            y.cutoff = 0.5, do.contour = F, do.plot = F)
+    regress.out='nUMI'
+    s$seurat <- ScaleData(object = s$seurat, vars.to.regress = regress.out)
+    s$seurat <- RunPCA(object = s$seurat, pc.genes = s$seurat@var.genes, do.print = FALSE)
+    PCElbowPlot(object = s$seurat)
+    npca=15
+    resolution=0.8
+    s$seurat <- FindClusters(object = s$seurat, reduction.type = "pca",
+                         dims.use = 1:npca,resolution = resolution,
+                         print.output = 0, save.SNN = F)
+    s$seurat <- RunTSNE(s$seurat, dims.use = 1:npca, do.fast = T)
+    s$meta.data$xy=s$seurat@dr$tsne@cell.embeddings
+    s$meta.data$clusters=s$seurat@ident
   }
   s
 }

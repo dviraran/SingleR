@@ -98,7 +98,7 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL,
 SingleR.DrawHeatmap = function(SingleR,cells.use = NULL, types.use = NULL,
                                clusters=NULL,top.n=40,normalize=T,
                                order.by.clusters=F,cells_order=NULL,silent=F,
-                               ...) {
+                               fontsize_row=9,...) {
   scores = SingleR$scores
   if (!is.null(cells.use)) {
     scores = scores[cells.use,]
@@ -141,25 +141,25 @@ SingleR.DrawHeatmap = function(SingleR,cells.use = NULL, types.use = NULL,
     data = data[,order(clusters$Clusters)]
     clusters = clusters[order(clusters$Clusters),,drop=F]
     pheatmap(data,border_color=NA,show_colnames=FALSE,
-             clustering_method=clustering_method,fontsize_row=9,
+             clustering_method=clustering_method,fontsize_row=fontsize_row,
              annotation_col = clusters,cluster_cols = F,silent=silent, 
              annotation_colors=annotation_colors)
   } else if (!is.null(cells_order)) {
     data = data[,cells_order]
     clusters = clusters[cells_order,,drop=F]
     pheatmap(data,border_color=NA,show_colnames=FALSE,
-             clustering_method=clustering_method,fontsize_row=9,
+             clustering_method=clustering_method,fontsize_row=fontsize_row,
              annotation_col = clusters,cluster_cols = F,silent=silent, 
              annotation_colors=annotation_colors)
   } else {
     if (!is.null(clusters)) {
       pheatmap(data,border_color=NA,show_colnames=FALSE,
-               clustering_method=clustering_method,fontsize_row=9,
+               clustering_method=clustering_method,fontsize_row=fontsize_row,
                annotation_col = clusters,silent=silent, 
                annotation_colors=annotation_colors)
     } else {
       pheatmap(data[,sample(ncol(data))],border_color=NA,show_colnames=FALSE,
-               clustering_method=clustering_method,fontsize_row=9,
+               clustering_method=clustering_method,fontsize_row=fontsize_row,
                silent=silent, annotation_colors=annotation_colors)
       
     }
@@ -242,7 +242,7 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, score.thres=0,
                                                 y = median(y)) -> centers
     p = p + geom_point(data = centers, aes(x=x, y=y), size=0, alpha=0) + 
       geom_text(data=centers, aes(label=ident), size = label.size,color='black')
-    p = p + guides(colour=guide_legend(override.aes = list(size=3,alpha=1)))
+    p = p + guides(shape=guide_legend(override.aes = list(size=3)))
     x.range = layer_scales(p)$x$range$range
     add_to_x = sum(abs(x.range))*0.03
     p = p + xlim(x.range[1]-add_to_x,x.range[2]+add_to_x)
@@ -254,10 +254,10 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, score.thres=0,
     }
     if (num.levels>35 & num.levels<60) {
       p = p + theme(legend.position="bottom",legend.direction="vertical",
-                    legend.text=element_text(size=6),legend.title = element_blank()) + guides(col=guide_legend(ncol=5,override.aes = list(size=2,alpha=1)))
+                    legend.text=element_text(size=6),legend.title = element_blank()) + guides(shape=guide_legend(ncol=5,override.aes = list(size=2.5,alpha=1)))
     } else if (num.levels>60){
       p = p + theme(legend.position="bottom",legend.direction="vertical",
-                    legend.text=element_text(size=6),legend.title = element_blank()) + guides(col=guide_legend(ncol=9,override.aes = list(size=2,alpha=1)))
+                    legend.text=element_text(size=6),legend.title = element_blank()) + guides(shape=guide_legend(ncol=9,override.aes = list(size=2,alpha=1)))
     } else {
       p = p + theme(legend.text=element_text(size=font.size),legend.title = 
                       element_blank())+ 
