@@ -142,6 +142,9 @@ $(document).ready(function () {
 <ul>
 <li>method can be ‘single’ or ‘cluster’. ‘cluster’ will annotate each cluster instead of each single cell. The cluster expression is the average of the expression of all the cells in the given cluster. If ‘cluster’ than ids must be given in the ‘clusters’ parameters.</li>
 <li>sc_data is the single cell matrix. If the data is from full-length method than the counts must be normalized to gene length (this can be achieved by using the built-in TPM function).</li>
+</ul>
+<pre class="r"><code>warning('Do not use the scaled.data field in Seurat as input. This field represents relative expression across cells, and is not appropriate as input for SingleR. The raw.data and data field are ok, but only if from a non full-length method.') </code></pre>
+<ul>
 <li>ref_data is the reference expression matrix. If using one of the built-in reference datasets than will be ref$data (ref is the reference dataset object). The built-in references are immgen or mouse.rnaseq (for mouse) and blueprint_encode or hpca (for human). See below for creating a new reference dataset.</li>
 <li>types is a vector of labels for each reference sample. If using one of the built-in reference datasets than will be ref<span class="math inline">\(types or ref\)</span>main_types (ref is the reference dataset object).</li>
 <li>genes can be ‘de’, ‘sd’ or a set of genes, see supplementary information 1 for more details.</li>

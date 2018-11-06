@@ -1,7 +1,7 @@
 ---
-title: "SingleR 0.2.0 - Usage"
+title: "SingleR 0.2.1 - Usage"
 author: "Dvir Aran"
-date: "7/18/2018"
+date: "11/6/2018"
 output: html_document
 ---
 
@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Introduction
 
 SingleR is a package that performs reference-based annotation of single-cell RNA-seq data. Here we show different ways to create SingleR objects. These objects can then be used with visualization functions available in the SingleR package and the SingleR web app (<http://comphealth.ucsf.edu/SingleR/>). 
-
 
 
 ## Basic SingleR function
@@ -28,6 +27,9 @@ singler = SingleR(method = "single", sc_data, ref_data, types, clusters = NULL,
 
   - method can be 'single' or 'cluster'. 'cluster' will annotate each cluster instead of each single cell. The cluster expression is the average of the expression of all the cells in the given cluster. If 'cluster' than ids must be given in the 'clusters' parameters. 
   - sc_data is the single cell matrix. If the data is from full-length method than the counts must be normalized to gene length (this can be achieved by using the built-in TPM function).
+```{r,warning=F}
+warning('Do not use the scaled.data field in Seurat as input. This field represents relative expression across cells, and is not appropriate as input for SingleR. The raw.data and data field are ok, but only if from a non full-length method.') 
+```
   - ref_data is the reference expression matrix. If using one of the built-in reference datasets than will be ref$data (ref is the reference dataset object). The built-in references are immgen or mouse.rnaseq (for mouse) and blueprint_encode or hpca (for human). See below for creating a new reference dataset. 
   - types is a vector of labels for each reference sample. If using one of the built-in reference datasets than will be ref$types or ref$main_types (ref is the reference dataset object).
   - genes can be 'de', 'sd' or a set of genes, see supplementary information 1 for more details.
@@ -44,7 +46,7 @@ To create the SingleR object simply run the following function:
 
 ```{r eval=FALSE,echo=TRUE}
 singler = CreateSinglerSeuratObject(counts, annot = NULL, project.name,
-  min.genes = 500, technology = "10X", species = "Human" (or "Mouse"), citation = "",
+  min.genes = 200, technology = "10X", species = "Human" (or "Mouse"), citation = "",
   ref.list = list(), normalize.gene.length = F, variable.genes = "de",
   fine.tune = T, reduce.file.size = T, do.signatures = T, min.cells = 2,
   npca = 10, regress.out = "nUMI", do.main.types = T,
@@ -67,7 +69,7 @@ save(singler,file='singler_object.RData')
   
 The returned singler object is a list that can be used for further analyses. See below.
   
-## Case 2: Already have a single-cell object.
+## Case 2: Already have a single-cell object
 
 In this case we already have a single-cell object with tSNE coordinates and clusters. We want to annotate this object and use those parameters.
 
@@ -81,7 +83,13 @@ singler = CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 50
   reduce.file.size = T, numCores = SingleR.numCores)
 
 singler$seurat = seurat.object # (optional)
-singler$meta.data$orig.ident = seurat.objectsingler@meta.data$orig.ident # the original identities, if not supplied in 'annot'
+singler$meta.data$orig.ident = seurat.object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
+
+## if using Seurat v3.0 and over use:
+singler$meta.data$xy = seurat.object@reductions$tsne@cell.embeddings # the tSNE coordinates
+singler$meta.data$clusters = seurat.object@active.ident # the Seurat clusters (if 'clusters' not provided)
+
+## if using a previous Seurat version use:
 singler$meta.data$xy = seurat.object@dr$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = seurat.object@ident # the Seurat clusters (if 'clusters' not provided)
 
