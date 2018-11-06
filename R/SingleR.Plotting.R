@@ -295,8 +295,13 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, score.thres=0,
 #' @return ggplot2 object
 SingleR.PlotFeature = function(SingleR,seurat, plot.feature='MaxScore', 
                                dot.size=1,title=NULL) {
-  df = data.frame(row.names = rownames(seurat@cell.names),
-                  seurat@dr$tsne@cell.embeddings)
+  if (packageVersion('Seurat')>3) {
+    xy = sc@reductions$tsne@cell.embeddings
+  } else {
+    xy = seurat@dr$tsne@cell.embeddings
+  }
+  df = data.frame(row.names = rownames(SingleR$cell.names),
+                  xy)
   if (length(plot.feature)==nrow(df)) {
     df$Feature=plot.feature
     tit = 'Feature'

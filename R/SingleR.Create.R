@@ -126,14 +126,23 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
 #' @param temp.dir used by FindClusters function.
 #'
 #' @return a Seurat object
-SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 500,
+SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                                  min.cells = 2,regress.out = 'nUMI',
                                  npca = 10,resolution=0.8,temp.dir=NULL) {
-  sc = CreateSeuratObject(raw.data = sc.data, min.cells = min.cells, 
-                          min.genes = min.genes, project = project.name)
   mtgenes = '^mt-'
-  mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), 
-                     value = TRUE,ignore.case=TRUE)
+  
+  if (packageVersion('Seurat')>3) {
+    sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
+                            min.features = min.genes, project = project.name)
+    mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@assays$RNA@data), 
+                       value = TRUE,ignore.case=TRUE)
+  } else {
+    sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
+                            min.genes = min.genes, project = project.name)
+    mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), 
+                       value = TRUE,ignore.case=TRUE)
+  }
+  
   percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
   sc <- AddMetaData(object = sc, metadata = percent.mito, 
                     col.name = "percent.mito")
@@ -141,27 +150,40 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 500,
   sc <- NormalizeData(object = sc, 
                       normalization.method = "LogNormalize", 
                       scale.factor = 10000)
-  sc <- FindVariableGenes(object = sc, mean.function = ExpMean, 
-                          dispersion.function = LogVMR, 
-                          x.low.cutoff = 0.0125, x.high.cutoff = 3, 
-                          y.cutoff = 0.5, do.contour = F, do.plot = F)
   
-  sc <- ScaleData(object = sc, vars.to.regress = regress.out)
-  
-  sc <- RunPCA(object = sc, pc.genes = sc@var.genes, do.print = FALSE)
-  
-  PCElbowPlot(object = sc)
-  
-  sc <- FindClusters(object = sc, reduction.type = "pca", 
-                     dims.use = 1:npca,resolution = resolution, 
-                     print.output = 0, save.SNN = F, 
-                     temp.file.location = temp.dir)
-  
-  if (ncol(sc@data)<100) {
-    sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T,perplexity=10  )
+  if (packageVersion('Seurat')>3) {
+    sc <- FindVariableFeatures(object = sc, mean.function = ExpMean, 
+                               dispersion.function = LogVMR, 
+                               x.low.cutoff = 0.0125, x.high.cutoff = 3, 
+                               y.cutoff = 0.5, do.contour = F, do.plot = F)
+    sc <- ScaleData(object = sc, use.umi=T)
+    sc <- RunPCA(object = sc, verbose = FALSE)
+    sc <- FindNeighbors(object = sc)
+    sc <- FindClusters(object = sc, ,resolution = resolution)
+    if (ncol(sc@assays$RNA@data)<100) {
+      sc <- RunTSNE(sc,perplexity=10  )
+    } else {
+      sc <- RunTSNE(sc)
+      
+    }
   } else {
-    sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T)
-    
+    sc <- FindVariableGenes(object = sc, mean.function = ExpMean, 
+                            dispersion.function = LogVMR, 
+                            x.low.cutoff = 0.0125, x.high.cutoff = 3, 
+                            y.cutoff = 0.5, do.contour = F, do.plot = F)
+    sc <- ScaleData(object = sc, vars.to.regress = regress.out)
+    sc <- RunPCA(object = sc, pc.genes = sc@var.genes, do.print = FALSE)
+    #PCElbowPlot(object = sc)
+    sc <- FindClusters(object = sc, reduction.type = "pca", 
+                       dims.use = 1:npca,resolution = resolution, 
+                       print.output = 0, save.SNN = F, 
+                       temp.file.location = temp.dir)
+    if (ncol(sc@data)<100) {
+      sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T,perplexity=10  )
+    } else {
+      sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T)
+      
+    }
   }
   
   sc
@@ -264,7 +286,7 @@ ReadSingleCellData = function(counts,annot) {
 #'
 #' @return a SingleR object containing a Seurat object
 CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
-                                     min.genes=500,technology='10X',
+                                     min.genes=200,technology='10X',
                                      species='Human',citation='',
                                      ref.list=list(),normalize.gene.length=F,
                                      variable.genes='de',fine.tune=T,
@@ -280,34 +302,50 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
                                   min.genes,min.cells=min.cells,
                                 regress.out=regress.out,npca=npca,
                                 temp.dir=temp.dir)
-  
-  orig.ident = sc.data$orig.ident[colnames(seurat@data)]
-  counts = sc.data$counts[,colnames(seurat@data)]
+  if (packageVersion('Seurat')>3) {
+    data = seurat@assays$RNA@data
+    clusters = seurat@active.ident
+  } else {
+    data = seurat@data
+    clusters = seurat@ident
+    
+  }
+  orig.ident = sc.data$orig.ident[colnames(data)]
+  counts = sc.data$counts[,colnames(data)]
   
   seurat@meta.data$orig.ident = factor(orig.ident)
   
-  clusters = seurat@ident
-  
   if(reduce.seurat.object==T) {
-    seurat@raw.data = c()
-    seurat@scale.data = c()
-    seurat@calc.params = list()
+    if (packageVersion('Seurat')>3) {
+      seurat@assays$RNA@counts = matrix()
+      seurat@assays$RNA@scale.data = matrix()
+    } else {
+      seurat@raw.data = c()
+      seurat@scale.data = c()
+      seurat@calc.params = list()
+    }
   }
   
   print('Creat SingleR object...')
   
   singler = CreateSinglerObject(counts,orig.ident,project.name,
-                                min.genes=0,technology,species,
+                                min.genes=min.genes,technology,species,
                                 citation,ref.list,
                                 normalize.gene.length,variable.genes,
                                 fine.tune,do.signatures,
-                                seurat@ident,do.main.types,
+                                clusters,do.main.types,
                                 reduce.file.size,temp.dir,numCores = numCores)
   
   singler$seurat = seurat 
-  singler$meta.data$xy = seurat@dr$tsne@cell.embeddings
-  singler$meta.data$clusters = seurat@ident
   
+  if (packageVersion('Seurat')>3) {
+    singler$meta.data$xy = seurat@reductions$tsne@cell.embeddings
+    singler$meta.data$clusters = seurat@active.ident
+    
+  } else {
+    singler$meta.data$xy = seurat@dr$tsne@cell.embeddings
+    singler$meta.data$clusters = seurat@ident
+  }
   singler
 }
 
@@ -333,7 +371,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
 #'
 #' @return a SingleR object
 CreateSinglerObject = function(counts,annot=NULL,project.name,
-                               min.genes=500,technology='10X',
+                               min.genes=0,technology='10X',
                                species='Human',citation='',
                                ref.list=list(),normalize.gene.length=F,
                                variable.genes='de',fine.tune=T,

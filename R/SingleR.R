@@ -212,7 +212,9 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
   cell.names = colnames(sc_data)
   
   if (method == "single") {
-    print(paste("Number of cells:",dim(sc_data)[2]))
+    if (dim(sc_data)[2]>2) {
+      print(paste("Number of cells:",dim(sc_data)[2]))
+    }
   } else if (method == "cluster") {
     n = length(levels(clusters))
     print(paste("Number of clusters:",n))
@@ -412,9 +414,9 @@ SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
   
   if (rerun.seurat==T) {
     s$seurat <- FindVariableGenes(object = s$seurat, mean.function = ExpMean,
-                            dispersion.function = LogVMR,
-                            x.low.cutoff = 0.0125, x.high.cutoff = 3,
-                            y.cutoff = 0.5, do.contour = F, do.plot = F)
+                                  dispersion.function = LogVMR,
+                                  x.low.cutoff = 0.0125, x.high.cutoff = 3,
+                                  y.cutoff = 0.5, do.contour = F, do.plot = F)
     regress.out='nUMI'
     s$seurat <- ScaleData(object = s$seurat, vars.to.regress = regress.out)
     s$seurat <- RunPCA(object = s$seurat, pc.genes = s$seurat@var.genes, do.print = FALSE)
@@ -422,8 +424,8 @@ SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
     npca=15
     resolution=0.8
     s$seurat <- FindClusters(object = s$seurat, reduction.type = "pca",
-                         dims.use = 1:npca,resolution = resolution,
-                         print.output = 0, save.SNN = F)
+                             dims.use = 1:npca,resolution = resolution,
+                             print.output = 0, save.SNN = F)
     s$seurat <- RunTSNE(s$seurat, dims.use = 1:npca, do.fast = T)
     s$meta.data$xy=s$seurat@dr$tsne@cell.embeddings
     s$meta.data$clusters=s$seurat@ident

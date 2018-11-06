@@ -11,6 +11,13 @@ devtools::install_github('dviraran/SingleR')
 # this might take long, though mostly because of the installation of Seurat.
 ```
 
+# Updates
+
+**11.6.2018**: The Seurat team has roled out Seurat version 3.0 with many changes to the function names and variables. It is important to note that SingleR is independent of Seurat, and only requires xy representation of the single-cells, which can be obtained by any function. However, SingleR provides wrapper functions to streamline the analysis with Seuart which are affected by these changes. SingleR is now updated to run with Seurat 3.0, but it is still in beta mode. 
+
+Best practice is to create the single-cell object first. Then, create the SingleR object with the same cells used in the single-cell object (after filtering low quality cells). Finally, copy to relevant fields to the SingleR object. The new t-SNE representations are in 
+`sc@reductions$tsne@cell.embeddings`.
+
 # Usage
 
 ```R
