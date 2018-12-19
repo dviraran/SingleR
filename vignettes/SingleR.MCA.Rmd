@@ -57,11 +57,14 @@ This SingleR object is fully functional, but quite big for analysis. We created 
 ```{r fig.height=10,fig.width=10,fig.align='center'}
 load(file.path(path.data,'mca.singler.rds'))
 mca.singler = as.data.frame(mca.singler)
-mca.singler$labels = paste(mca.singler$Main.Types,mca.singler$Types,mca.singler$Orig.Ident,sep='/')
+mca.singler$labels = paste0('Annotation: ',mca.singler$Types,'\nTissue: ',mca.singler$Orig.Ident)
 mca.singler$FItSNE_1 = as.numeric(levels(mca.singler$FItSNE_1))[mca.singler$FItSNE_1]
 mca.singler$FItSNE_2 = as.numeric(levels(mca.singler$FItSNE_2))[mca.singler$FItSNE_2]
-p = ggplot(mca.singler)+geom_point_rast(aes(x=FItSNE_1,y=FItSNE_2,color=Main.Types),size=0.1,alpha=0.5)+
-  guides(color=guide_legend(override.aes = list(size=2,alpha=1)))+theme_classic()
+p = ggplot(mca.singler)+geom_point_rast(aes(x=FItSNE_1,y=FItSNE_2,color=Main.Types),
+                                        size=0.1,alpha=0.5)+
+  guides(color=guide_legend(override.aes = list(size=2,alpha=1)))+
+  scale_color_manual(values = singler.colors)+
+  theme_classic()
 p
 ```
 

@@ -67,8 +67,9 @@ SingleR.DrawBoxPlot = function(sc_data, cell_id, ref, labels.use=NULL,
   df$Types <- factor(df$Types, levels = levels(fac))
   
   p = ggplot(df, aes(x = Types, y = Spearman,  color = Types)) +
-    geom_boxplot(alpha = 0.2)+theme_classic() +
-    geom_point(alpha = 0.5, position = "jitter",shape=16) +
+    geom_boxplot(alpha = 0.2,outlier.shape = NA)+theme_classic() +
+    geom_point(size=0.8,alpha = 0.4, position = "jitter",shape=16) +
+    scale_color_manual(values=rep('black',8))+
     xlab('') + ggtitle(paste(colnames(sc_data)[cell_id])) +
     
     theme(legend.position="none"

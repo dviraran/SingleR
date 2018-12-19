@@ -2,7 +2,10 @@
 title: "Supplementary Information 2: Benchmarking *SingleR*"
 output: 
   html_document:
-    code_folding: hide
+        toc: true
+        toc_depth: 3
+        fig_caption: yes
+        code_folding: hide
 bibliography: Citations.bib
 ---
 
@@ -109,7 +112,7 @@ It is many times useful to view the annotations in a table compared to the origi
 kable(table(singler$singler[[1]]$SingleR.single$labels,singler$meta.data$orig.ident))
 ```
 
-## *SingleR* score is equuivalent to the number of non-zero genes
+## *SingleR* score is equivalent to the number of non-zero genes
 
 The heatmap presented above may be misleading, since each column is normalized to a score between 0 and 1. Thus, a single cell may have low correlations with multiple cell types, and none of them are the accurate cell type, but in the heatmap they will all be red. Without normalization the data looks like this:
 
@@ -410,6 +413,102 @@ Importantly, we can see that this test is not dependent on nGenes:
 ggplot(df,aes(x=nGene,y=pval,color=Identity))+geom_point(size=0.3)+
     guides(color = guide_legend(override.aes = list(size = 3)))+
   ylab('-log10(p-value)')
+```
+
+# Case study 3: Simulating number of non-zero genes 
+
+The number of drop-outs in cells is highly variable and may have strong impact on the ability to correctly annotate cells. Here we further explore this issue by simulating varying number of non-zero genes (nGenes) in cells with known identity.
+
+From the sorted 10X dataset presented in case study 2 (excluding CD4+ helper T-cells, which are represtend by the CD4+ memory T-cells), we randomly chose 10 cells with at least 1000 nGenes that were correcly annotated by SingleR (after fine-tuning).
+
+From the non-zero genes in each cell we chose 1000 genes to be non-zero and the rest were switched to 0; thus all cells have exactly 1000 non-zero genes. We counted correct inferences by SingleR, before and after fine-tuning. We then iteratively remove 50 genes, ran SingleR, and counted again the number of correct annotations. We repeated this process 10 times, randomly choosing different genes to remove. The code for this analysis is available in the Github repository.
+
+We plot the percent of correct annotations as a function of nGenes (standard error is shown):
+
+```{r message=FALSE,warning=FALSE,fig.width=6,fig.height=2.7}
+source('simulations_functions.R')
+files = dir('simulations/',full.names = T,pattern = 'RData')
+
+res = list()
+res$correct = matrix(NA,19,length(files))
+res$correct.nft = matrix(NA,19,length(files))
+for (i in 1:length(files)) {
+  load(files[i])
+  res$correct[,i] = correct
+  res$correct.nft[,i] = correct.nft 
+}
+
+res$correct = 100*res$correct/90
+res$correct.nft = 100*res$correct.nft/90
+rownames(res$correct) = seq(1000,100,by=-50)
+rownames(res$correct.nft) = seq(1000,100,by=-50)
+correct = melt(rbind(res$correct,res$correct.nft))
+correct$FineTune=rep(c(rep('TRUE',nrow(res$correct)),rep('FALSE',nrow(res$correct))),ncol(res$correct))
+colnames(correct)[1]='nGenes'
+correct <- summarySE(correct, measurevar="value", groupvars=c("nGenes",'FineTune'))
+
+
+ggplot(correct, aes(x=nGenes, y=value,color=FineTune)) + 
+  geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.1) +
+  geom_line() +
+  geom_point()+theme_classic()+ylab('% correct')
+
+```
+
+We can see a gradual decline in the accuracy of SingleR is a function of nGenes. This is more evident in the fine-tuned annotations (blue line), which shows the importance of fine-tuning to differentiate closely related cell types, even when there are more genes available. At 500 genes we observe 90%, and the decline is more evident with less genes, supporting our choice to use >500 nGenes in our analysis of mouse lung injury.
+
+The lines per cell types show that as expected, with fewer genes it is harder to differentiate closely related cell types (T-cell subsets in this data):
+
+```{r message=FALSE,warning=FALSE,fig.width=6,fig.height=3}
+
+B = c()
+for (k in 1:length(files)) {
+  
+  load(files[k])
+  ct=unique(names(unlist(lapply(tbl,FUN=function(x) x[,'B-cells']))))
+  ident = colnames(tbl[[1]])
+  b = matrix(0,length(ident),length(tbl))
+  for (j in 1:length(ident)) {
+    a=matrix(0,length(ct),length(tbl))
+    rownames(a) = ct
+    
+    for (i in 1:length(tbl)) {
+      x = tbl[[i]][,ident[j]]
+      a[names(x),i] = x 
+      
+    }
+    b[j,] = switch(ident[j], 
+                   'B-cells' = colSums(a[grepl('B-cell',rownames(a)),]),
+                   'CD4+ Tm' = colSums(a[rownames(a) %in% c('CD4+ Tcm','CD4+ Tem'),]),
+                   'CD4+ Tn' = a[rownames(a)=='CD4+ T-cells',],
+                   'CD8+ Tcyto' = colSums(a[rownames(a) %in% c('CD8+ Tcm','CD8+ Tem'),]),
+                   'CD8+ Tn' = a[rownames(a)=='CD8+ T-cells',],
+                   'HSC' = colSums(a[rownames(a) %in% c('CLP','MEP','GMP','MPP'),]),
+                   'Monocytes' = a[rownames(a)=='Monocytes',],
+                   'NK cells' = a[rownames(a)=='NK cells',],
+                   'Tregs' = a[rownames(a)=='Tregs',]
+    )
+    
+    
+  }  
+  rownames(b) = ident
+  colnames(b) = seq(1000,100,by=-50) 
+  
+  if (length(B)==0) {
+    B = b
+  } else {
+    B = rbind(B,b)
+  }
+}
+
+df = melt(B)
+colnames(df) = c('CellType','nGenes','value')
+df <- summarySE(df, measurevar="value", groupvars=c("nGenes",'CellType'))
+
+ggplot(df, aes(x=nGenes, y=value,color=CellType)) + 
+  geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.1) +
+  geom_line() +
+  geom_point()+theme_classic()+ylab('# correct')+scale_color_manual(values=singler.colors)
 ```
 
 # *SingleR* web tool

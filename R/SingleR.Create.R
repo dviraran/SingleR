@@ -134,7 +134,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
   if (packageVersion('Seurat')>3) {
     sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
                             min.features = min.genes, project = project.name)
-    mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@assays$RNA@data), 
+    mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@assay$RNA@data), 
                        value = TRUE,ignore.case=TRUE)
   } else {
     sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
@@ -185,7 +185,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
       
     }
   }
-  
+    
   sc
 }
 
@@ -594,6 +594,8 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
         singler$singler[[j]]$SingleR.single$labels1[order,]
       singler$singler[[j]]$SingleR.single$scores = 
         singler$singler[[j]]$SingleR.single$scores[order,]
+      singler$singler[[j]]$SingleR.single$cell.names = 
+        singler$singler[[j]]$SingleR.single$cell.names[order]
       
       singler$singler[[j]]$SingleR.single.main$labels = 
         singler$singler[[j]]$SingleR.single.main$labels[order,]
@@ -601,7 +603,8 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
         singler$singler[[j]]$SingleR.single.main$labels1[order,]
       singler$singler[[j]]$SingleR.single.main$scores = 
         singler$singler[[j]]$SingleR.single.main$scores[order,]
-      
+      singler$singler[[j]]$SingleR.single.main$cell.names = 
+        singler$singler[[j]]$SingleR.single.main$cell.names[order]
     }
     
     #  singler$singler[[j]]$SingleR.single$clusters = SingleR.Cluster(singler$singler[[j]]$SingleR.single,10)
@@ -684,3 +687,42 @@ remove.Unnecessary.Data.single = function(singler.data) {
   }
   singler.data
 }
+
+CreateBigSingleRObject = function(seurat.object,counts,annot=NULL,project.name,
+                                     min.genes=200,technology='10X',
+                                     species='Human',citation='',
+                                     ref.list=list(),normalize.gene.length=F,
+                                     variable.genes='de',fine.tune=T,
+                                     reduce.file.size=T,do.signatures=F,
+                                     do.main.types=T,
+                                     temp.dir=getwd(), numCores = SingleR.numCores) {
+  
+  n = ncol(counts)
+  s = seq(1,n,by=10000)
+  dir.create(paste0(temp.dir,'/singler.temp/'), showWarnings = FALSE)
+  for (i in s) {
+    print(i)
+    A = seq(i,min(i+10000-1,n))
+    singler = CreateSinglerObject(counts[,A], annot = annot[A], project.name=project.name, 
+                                  min.genes = min.genes,  technology = technology, 
+                                  species = species, citation = citation,
+                                  do.signatures = do.signatures, clusters = NULL)
+    
+    save(singler,file=paste0(temp.dir,'/singler.temp/',project.name,'.',i,'.RData'))
+  }
+  
+  singler.objects.file <- list.files(paste0(temp.dir,'/singler.temp/'), 
+                                     pattern='RData',full.names=T)
+  
+  singler.objects = list()
+  for (i in 1:length(singler.objects.file)) {
+    load(singler.objects.file[[i]])
+    singler.objects[[i]] = singler
+  }
+
+  singler = SingleR.Combine(singler.objects,order = colnames(counts), 
+                            clusters=seurat.object@ident,xy=seurat.object@dr$tsne@cell.embeddings)
+  
+  singler
+}
+  

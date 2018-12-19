@@ -5,7 +5,7 @@
 \title{Wrapper function to create a SingleR object + Seurat object}
 \usage{
 CreateSinglerSeuratObject(counts, annot = NULL, project.name,
-  min.genes = 500, technology = "10X", species = "Human",
+  min.genes = 200, technology = "10X", species = "Human",
   citation = "", ref.list = list(), normalize.gene.length = F,
   variable.genes = "de", fine.tune = T, reduce.file.size = T,
   do.signatures = F, min.cells = 2, npca = 10,

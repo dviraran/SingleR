@@ -2,6 +2,9 @@
 title: "Supplementary Information 1: SingleR overview"
 output: 
   html_document:
+        toc: true
+        toc_depth: 3
+        fig_caption: yes    
         code_folding: hide
 bibliography: Citations.bib
 ---
@@ -14,6 +17,7 @@ library(ggplot2)
 library(pheatmap)
 library(SingleR)
 library(kableExtra)
+source('~/Documents/SingleR/package/SingleR/R/SingleR.R')
 path = '~/Documents/SingleR/package/SingleR/manuscript_figures/FiguresData/'
 ```
 
@@ -63,7 +67,7 @@ SingleR.DrawScatter(sc_data = singler$seurat@data,cell_id = 10,
 1. 'sd' - genes with a standard deviation across all samples in the reference dataset over a threshold. We choose thresholds such that we start with 3000-4000 genes.
 2. 'de' - top N genes that have a higher median expression in a cell type compared to each other cell type. We use a varying N, depending on the number of cell types used in the analysis (K): 
 
-$N=round(333\*\frac{2}{3}^{log_2K})$
+$N=round(333  *\frac{2}{3}^{log_2K})$
 
 This function creates the distribution below. The y-axis shows the number of differentially expressed genes used for each pair of cell types used in the analysis. In the first round, when there are many cell types to scores, SingleR uses only a small number of genes, but in the last rounds of the fine-tuning, this number increases up to 500 in the last iteration:
 

@@ -13,15 +13,15 @@ r4	WT	1.779103	Tamoxifen	Bleomycin	2
 r5	WT	1.769703	Tamoxifen	Bleomycin	2
 r6	WT	1.733676	Tamoxifen	Bleomycin	2
 r7	WT	1.975303	Tamoxifen	Bleomycin	2
-r1	DTA	1.368248	Tamoxifen	Bleomycin	3
-r2	DTA	1.05921	Tamoxifen	Bleomycin	3
-r3	DTA	1.657723	Tamoxifen	Bleomycin	3
-r4	DTA	0.992062	Tamoxifen	Bleomycin	3
-r5	DTA	1.256704	Tamoxifen	Bleomycin	3
-r6	DTA	1.525813	Tamoxifen	Bleomycin	3
-r7	DTA	1.281802	Tamoxifen	Bleomycin	3
-r1	DTA	0.935901947	No tamoxifen	Control	1
-r2	DTA	1.153369907	No tamoxifen	Control	1
-r3	DTA	0.728128249	No tamoxifen	Control	1
-r1	DTA	1.73375561	No tamoxifen	Bleomycin	2
-r2	DTA	1.836348664	No tamoxifen	Bleomycin	2
+r1	Cre+DTA+	1.368248	Tamoxifen	Bleomycin	3
+r2	Cre+DTA+	1.05921	Tamoxifen	Bleomycin	3
+r3	Cre+DTA+	1.657723	Tamoxifen	Bleomycin	3
+r4	Cre+DTA+	0.992062	Tamoxifen	Bleomycin	3
+r5	Cre+DTA+	1.256704	Tamoxifen	Bleomycin	3
+r6	Cre+DTA+	1.525813	Tamoxifen	Bleomycin	3
+r7	Cre+DTA+	1.281802	Tamoxifen	Bleomycin	3
+r1	Cre+DTA+	0.935901947	No tamoxifen	Control	1
+r2	Cre+DTA+	1.153369907	No tamoxifen	Control	1
+r3	Cre+DTA+	0.728128249	No tamoxifen	Control	1
+r1	Cre+DTA+	1.73375561	No tamoxifen	Bleomycin	2
+r2	Cre+DTA+	1.836348664	No tamoxifen	Bleomycin	2

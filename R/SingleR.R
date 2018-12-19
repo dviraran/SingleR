@@ -359,8 +359,12 @@ SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
   
   if (!is.null(s$seurat)) {
     s$seurat = SubsetData(s$seurat,colnames(s$seurat@data)[subsetdata])
+    if (packageVersion('Seurat')>3) {
+      
+    } else {
     subsetdata = unlist(lapply(s$seurat@cell.names,FUN=function(x) 
       which(singler$singler[[1]]$SingleR.single$cell.names==x)))
+    }
   }
   
   for (i in 1:length(s$singler)) {
@@ -421,7 +425,7 @@ SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
     s$seurat <- ScaleData(object = s$seurat, vars.to.regress = regress.out)
     s$seurat <- RunPCA(object = s$seurat, pc.genes = s$seurat@var.genes, do.print = FALSE)
     PCElbowPlot(object = s$seurat)
-    npca=15
+    npca=20
     resolution=0.8
     s$seurat <- FindClusters(object = s$seurat, reduction.type = "pca",
                              dims.use = 1:npca,resolution = resolution,

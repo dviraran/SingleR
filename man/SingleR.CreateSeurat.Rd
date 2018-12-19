@@ -4,7 +4,7 @@
 \alias{SingleR.CreateSeurat}
 \title{Wrapper function to create a Seurat object}
 \usage{
-SingleR.CreateSeurat(project.name, sc.data, min.genes = 500,
+SingleR.CreateSeurat(project.name, sc.data, min.genes = 200,
   min.cells = 2, regress.out = "nUMI", npca = 10, resolution = 0.8,
   temp.dir = NULL)
 }

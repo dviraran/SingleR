@@ -4,12 +4,14 @@
 \alias{SingleR.Subset}
 \title{Subseting a SingleR object. This function subsets all the SingleR data and the Seurat object if included.}
 \usage{
-SingleR.Subset(singler, subsetdata)
+SingleR.Subset(singler, subsetdata, rerun.seurat = F)
 }
 \arguments{
 \item{singler}{as SingleR object}
 
 \item{subsetdata}{a logical vector of single-cells to include in the subset object}
+
+\item{rerun.seurat}{if TRUE reruns the Seurat analyses for the subset data.}
 }
 \value{
 a subset of the original SingleR vector
