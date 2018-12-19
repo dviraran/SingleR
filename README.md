@@ -13,6 +13,17 @@ devtools::install_github('dviraran/SingleR')
 
 # Updates
 
+**12.18.2018**: The SingleR browser has been upgraded allowing to use datasets with >100K single-cells. In addition, to make it more user friendly, the object used for SingleR has been upgraded as well to an S4 object. The web browser only accepts the new S4 objects. 
+
+However, the functions in the package (outside of the browser) have not been yet been modified to work with new object. Thus, to use the browser, please convert the SingleR object (the object created by the CreateSingleR functions) to the S4 object using the following code:
+
+```R
+singler.new = convertSingleR2Browser(singler)
+saveRDS(singler.new,file=paste0(working,dir,'/',singler.new@project.name,'.rds')
+```
+
+The new SingleR S4 object simlifies the access SingleR annotations and allows multipe identity columns (orig.ident) and clustering columns. See ?'SingleR-class' for more details.
+
 **11.6.2018**: The Seurat team has roled out Seurat version 3.0 with many changes to the function names and variables. It is important to note that SingleR is independent of Seurat, and only requires xy representation of the single-cells, which can be obtained by any function. However, SingleR provides wrapper functions to streamline the analysis with Seuart which are affected by these changes. SingleR is now updated to run with Seurat 3.0, but it is still in beta mode. 
 
 Best practice is to create the single-cell object first. Then, create the SingleR object with the same cells used in the single-cell object (after filtering low quality cells). Finally, copy to relevant fields to the SingleR object. The new t-SNE representations are in 
