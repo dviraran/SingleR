@@ -19,7 +19,7 @@ However, the functions in the package (outside of the browser) have not been yet
 
 ```R
 singler.new = convertSingleR2Browser(singler)
-saveRDS(singler.new,file=paste0(working,dir,'/',singler.new@project.name,'.rds')
+saveRDS(singler.new,file=paste0(singler.new@project.name,'.rds')
 ```
 
 The new SingleR S4 object simlifies the access SingleR annotations and allows multipe identity columns (orig.ident) and clustering columns. See ?'SingleR-class' for more details.
