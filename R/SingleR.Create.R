@@ -134,16 +134,18 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
   if (packageVersion('Seurat')>3) {
     sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
                             min.features = min.genes, project = project.name)
-    mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@assay$RNA@data), 
-                       value = TRUE,ignore.case=TRUE)
+    mito.features <- grep(pattern = mtgenes, x = rownames(x = sc), value = TRUE,ignore.case=TRUE)
+    percent.mito <- Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts')[mito.features, ]) / Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts'))
+ 
   } else {
     sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
                             min.genes = min.genes, project = project.name)
     mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), 
                        value = TRUE,ignore.case=TRUE)
+    percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
+    
   }
   
-  percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
   sc <- AddMetaData(object = sc, metadata = percent.mito, 
                     col.name = "percent.mito")
   
@@ -152,18 +154,19 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                       scale.factor = 10000)
   
   if (packageVersion('Seurat')>3) {
-    sc <- FindVariableFeatures(object = sc, mean.function = ExpMean, 
-                               dispersion.function = LogVMR, 
-                               x.low.cutoff = 0.0125, x.high.cutoff = 3, 
-                               y.cutoff = 0.5, do.contour = F, do.plot = F)
-    sc <- ScaleData(object = sc, use.umi=T)
-    sc <- RunPCA(object = sc, verbose = FALSE)
-    sc <- FindNeighbors(object = sc)
-    sc <- FindClusters(object = sc, ,resolution = resolution)
+    sc <- FindVariableFeatures(object = sc, selection.method = 'mean.var.plot', 
+                               mean.cutoff = c(0.0125, 3), 
+                               dispersion.cutoff = c(0.5, Inf) ,
+                               do.contour = F, do.plot = F)
+
+    sc <- ScaleData(object = sc, features = rownames(x = sc),use.umi=T)
+    sc <- RunPCA(object = sc, features = VariableFeatures(object = sc),verbose = FALSE)
+    sc <- FindNeighbors(object = sc, dims = 1:npca)
+    sc <- FindClusters(object = sc,resolution = resolution)
     if (ncol(sc@assays$RNA@data)<100) {
-      sc <- RunTSNE(sc,perplexity=10  )
+      sc <- RunTSNE(sc,perplexity=10,dims = 1:npca)
     } else {
-      sc <- RunTSNE(sc)
+      sc <- RunTSNE(sc,dims = 1:npca)
       
     }
   } else {
