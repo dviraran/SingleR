@@ -35,48 +35,93 @@ setClass("SingleR", representation(project.name = "character",
 #'
 #' @return S4 SingleR object that can be uploaded to the SingleR browser
 convertSingleR2Browser = function(singler) { 
+  
+  ref.names = unlist(lapply(singler$singler,FUN=function(x) x$about$RefData))
+  
+  labels = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single$labels))
+  if (!is.null(singler$singler[[1]]$SingleR.single.main)) {
+    labels.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single.main$labels))
+    labels = cbind(labels,labels.main)
+    colnames(labels) = c(ref.names,paste0(ref.names,'.main'))
+  } else {
+    colnames(labels) = c(ref.names)
+  }
+  rownames(labels)=rownames(singler$singler[[1]]$SingleR.single$labels)
+  
+  labels1 = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single$labels1))
+  if (!is.null(singler$singler[[1]]$SingleR.single.main)) {
+    labels1.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single.main$labels1))
+    labels1 = cbind(labels1,labels1.main)
+    colnames(labels1) = c(ref.names,paste0(ref.names,'.main'))
+  } else {
+    colnames(labels1) = c(ref.names)
+  }
+  rownames(labels1)=rownames(singler$singler[[1]]$SingleR.single$labels1)
+  
+  labels.clusters = data.frame()
+  labels.clusters1 = data.frame()
+  
+  if (length(levels(singler$meta.data$clusters))>1) {
+    if (!is.null(singler$singler[[1]]$SingleR.clusters)) {
+      labels.clusters = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters$labels))
+      if (!is.null(singler$singler[[1]]$SingleR.clusters.main)) {
+        labels.clusters.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters.main$labels))
+        labels.clusters = cbind(labels.clusters,labels.clusters.main)
+        colnames(labels.clusters) = c(ref.names,paste0(ref.names,'.main'))
+      } else {
+        colnames(labels.clusters) = c(ref.names)
+      }
+      rownames(labels.clusters) = levels(singler$meta.data$clusters)
+    }
+    
+    if (!is.null(singler$singler[[1]]$SingleR.clusters)) {
+      labels.clusters1 = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters$labels1))
+      if (!is.null(singler$singler[[1]]$SingleR.clusters.main)) {
+        labels.clusters.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters.main$labels1))
+        labels.clusters1 = cbind(labels.clusters1,labels.clusters.main)
+        colnames(labels.clusters1) = c(ref.names,paste0(ref.names,'.main'))
+      } else {
+        colnames(labels.clusters1) = c(ref.names)
+      }
+      rownames(labels.clusters1) = levels(singler$meta.data$clusters)
+      
+    }
+  }
+  scores = lapply(singler$singler,FUN=function(x) x$SingleR.single$scores)
+  if (!is.null(singler$singler[[1]]$SingleR.single.main)) {
+    scores.main = lapply(singler$singler,FUN=function(x) x$SingleR.single.main$scores)
+    scores = c(scores,scores.main)
+    names(scores) = c(ref.names,paste0(ref.names,'.main'))
+  } else {
+    names(scores) = c(ref.names)
+  }
+  
+  
+  
   singler.small = new('SingleR',project.name=singler$meta.data$project.name,
                       xy=singler$meta.data$xy,
-                      labels = data.frame('Immgen'=singler$singler[[1]]$SingleR.single$labels,
-                                          'Immgen.main'=singler$singler[[1]]$SingleR.single.main$labels,
-                                          'MouseRNAseq'=singler$singler[[2]]$SingleR.single$labels,
-                                          'MouseRNAseq.main'=singler$singler[[2]]$SingleR.single.main$labels
-                      ),        
-                      labels.NFT = data.frame('Immgen'=singler$singler[[1]]$SingleR.single$labels1,
-                                              'Immgen.main'=singler$singler[[1]]$SingleR.single.main$labels1,
-                                              'MouseRNAseq'=singler$singler[[2]]$SingleR.single$labels1,
-                                              'MouseRNAseq.main'=singler$singler[[2]]$SingleR.single.main$labels1
-                      ),
-                      labels.clusters = data.frame('Immgen'=singler$singler[[1]]$SingleR.clusters$labels,
-                                                   'Immgen.main'=singler$singler[[1]]$SingleR.clusters.main$labels,
-                                                   'MouseRNAseq'=singler$singler[[2]]$SingleR.clusters$labels,
-                                                   'MouseRNAseq.main'=singler$singler[[2]]$SingleR.clusters.main$labels
-                      ),        
-                      labels.clusters.NFT = data.frame('Immgen'=singler$singler[[1]]$SingleR.clusters$labels1,
-                                                       'Immgen.main'=singler$singler[[1]]$SingleR.clusters.main$labels1,
-                                                       'MouseRNAseq'=singler$singler[[2]]$SingleR.clusters$labels1,
-                                                       'MouseRNAseq.main'=singler$singler[[2]]$SingleR.clusters.main$labels1
-                      ),
-                      scores = list('Immgen' = singler$singler[[1]]$SingleR.single$scores,
-                                    'Immgen.main' = singler$singler[[1]]$SingleR.single.main$scores,
-                                    'MouseRNAseq' = singler$singler[[2]]$SingleR.single$scores,
-                                    'MouseRNAseq.main' = singler$singler[[2]]$SingleR.single.main$scores
-                      ),
+                      labels = labels,
+                      labels.NFT = labels1,
+                      labels.clusters = labels.clusters,        
+                      labels.clusters.NFT = labels.clusters1,
+                      scores = scores,
                       clusters = data.frame(clusters=singler$meta.data$clusters),
                       ident = data.frame(orig.ident = singler$meta.data$orig.ident),
                       other = data.frame(singler$signatures),
                       expr = singler$seurat@data,
-                      meta.data = c('Citation' = singler$singler[[2]]$about$Citation, 
-                                    'Organism' = singler$singler[[2]]$about$Organism,
-                                    'Technology' = singler$singler[[2]]$about$Technology)
+                      meta.data = c('Citation' = singler$singler[[1]]$about$Citation, 
+                                    'Organism' = singler$singler[[1]]$about$Organism,
+                                    'Technology' = singler$singler[[1]]$about$Technology)
   )
   singler.small
 }
 
 if (FALSE) {
-for (i in 43:length(files)) { 
-  load(paste0('~/Documents/SingleR/SingleRbrowseR/data/',files[i]))
-  singler.small = convertSingleR2Browser(singler)
-  saveRDS(singler.small,file=paste0('~/Documents/SingleR/SingleRbrowseR/data/',gsub('RData','rds',files[i])))
-}
+  files = dir('~/Documents/SingleR/SingleR/data/',pattern='RData')
+  for (i in 1:length(files)) { 
+    print(files[i])
+    load(paste0('~/Documents/SingleR/SingleR/data/',files[i]))
+    singler.small = convertSingleR2Browser(singler)
+    saveRDS(singler.small,file=paste0('~/Documents/SingleR/SingleRbrowseR/data/',gsub('RData','rds',files[i])))
+  }
 }
