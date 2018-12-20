@@ -22,18 +22,21 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,
   print(paste("Fine-tuning round on top cell types (using", numCores, 
               "CPU cores):"))
   labels = pbmclapply(1:N,FUN=function(i){
-    max_score = max(scores[i,])
-    topLabels = names(scores[i,scores[i,]>=max_score-fine.tune.thres])
-    if (length(topLabels)==0) {
-      return (names(which.max(scores[i,])))
-    } else {
-      while(length(topLabels)>1) {
-        topLabels = fineTuningRound(topLabels,types,ref_data,genes,
-                                    mean_mat[,topLabels],sd.thres,
-                                    sc_data[,i],quantile.use,fine.tune.thres)
-      }
-      return (topLabels)
+  max_score = max(scores[i,])
+  topLabels = names(scores[i,scores[i,]>=max_score-fine.tune.thres])
+  if (length(topLabels)==0) {
+    return (names(which.max(scores[i,])))
+  } else {
+    k=1
+    while(length(topLabels)>1) {
+      print(k)
+      topLabels = fineTuningRound(topLabels,types,ref_data,genes,
+                                  mean_mat[,topLabels],sd.thres,
+                                  sc_data[,i],quantile.use,fine.tune.thres)
+      k=k+1
     }
+    return (topLabels)
+  }
   },mc.cores=numCores)
   labels = as.matrix(unlist(labels))
   
@@ -87,13 +90,15 @@ fineTuningRound = function(topLabels,types,ref_data,genes,mat,sd.thres,
   
   ref_data.filtered = ref_data.filtered[genes.filtered,]
   sc_data.filtered = as.matrix(sc_data[genes.filtered])
-  #data = sc_data.filtered[,i]
+  if (length(genes.filtered)<20) {
+    return (topLabels[1])
+  }
   if (sd(sc_data.filtered)>0) {
     r=cor(sc_data.filtered,ref_data.filtered,method='spearman')
-    agg_scores = quantileMatrix(r,types.filtered,quantile.use);
-    max_score = max(agg_scores)
-    agg_scores = agg_scores[,-which.min(agg_scores)]
-    topLabels = names(agg_scores)[agg_scores>=max_score-fine.tune.thres]
+    agg_scores = quantileMatrix(r,types.filtered,quantile.use)[1,];
+    agg_scores = sort(agg_scores,decreasing = T)
+    agg_scores = agg_scores[-length(agg_scores)]
+    topLabels = names(agg_scores)[agg_scores>=agg_scores[1]-fine.tune.thres]
   } else {
     topLabels = topLabels[1]
   }
@@ -362,8 +367,8 @@ SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
     if (packageVersion('Seurat')>3) {
       
     } else {
-    subsetdata = unlist(lapply(s$seurat@cell.names,FUN=function(x) 
-      which(singler$singler[[1]]$SingleR.single$cell.names==x)))
+      subsetdata = unlist(lapply(s$seurat@cell.names,FUN=function(x) 
+        which(singler$singler[[1]]$SingleR.single$cell.names==x)))
     }
   }
   
