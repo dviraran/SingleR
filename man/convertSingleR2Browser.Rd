@@ -4,10 +4,14 @@
 \alias{convertSingleR2Browser}
 \title{Convert the SingleR output object to a SingleR S4 object that can be uploaded to the SingleR browser.}
 \usage{
-convertSingleR2Browser(singler)
+convertSingleR2Browser(singler, use.singler.cluster.annot = T)
 }
 \arguments{
 \item{singler}{the SingleR output object}
+
+\item{use.singler.cluster.annot}{if FALSE, do not add the SingleR clusters annotations. Default is TRUE.
+This is used for objects that where subseted from the full object, but the SingleR clusters annotations
+where not regenerated.}
 }
 \value{
 S4 SingleR object that can be uploaded to the SingleR browser
