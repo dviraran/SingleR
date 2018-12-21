@@ -159,7 +159,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                                dispersion.cutoff = c(0.5, Inf) ,
                                do.contour = F, do.plot = F)
 
-    sc <- ScaleData(object = sc, features = rownames(x = sc),use.umi=T)
+    sc <- ScaleData(object = sc,use.umi=T)
     sc <- RunPCA(object = sc, features = VariableFeatures(object = sc),verbose = FALSE)
     sc <- FindNeighbors(object = sc, dims = 1:npca)
     sc <- FindClusters(object = sc,resolution = resolution)
