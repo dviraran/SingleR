@@ -29,7 +29,6 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,
   } else {
     k=1
     while(length(topLabels)>1) {
-      print(k)
       topLabels = fineTuningRound(topLabels,types,ref_data,genes,
                                   mean_mat[,topLabels],sd.thres,
                                   sc_data[,i],quantile.use,fine.tune.thres)
