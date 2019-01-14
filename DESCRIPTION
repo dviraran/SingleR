@@ -23,4 +23,5 @@ Imports: RColorBrewer,
     pheatmap,
     parallel,
     devtools,
-    doFuture
+    doFuture,
+    data.table
