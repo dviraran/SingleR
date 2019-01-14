@@ -118,14 +118,21 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,step=100
   sc_data = as.matrix(sc_data[genes,])
   ref_data = as.matrix(ref_data[genes,])
   
-  if (nrow(sc_data)>step) {
-    n = row(sc_data)
+  if (ncol(sc_data)>step) {
+    n = ncol(sc_data)
     s = seq(step+1,n,by=step)
-    r=cor(sc_data[,1:step],ref_data,method='spearman')
-    for (i in 1:length(s)) {
-      A = seq(s[i],min(s[i]+step-1,n))
-      r=cbind(r,cor(sc_data[,A],ref_data,method='spearman'))
+    tmpr = foreach (i = 0:length(s)) %dopar% {
+      if(i == 0){
+        res = data.table::data.table(cor(sc_data[,1:step],ref_data,method='spearman'))
+      } else {
+        A = seq(s[i],min(s[i]+step-1,n))
+        # r=rbind(r,cor(sc_data[,A],ref_data,method='spearman'))
+        res = data.table::data.table(cor(sc_data[,A],ref_data,method='spearman'))
+      }
+      res
     }
+    r = data.table::rbindlist(tmpr, use.names = T)
+    r = as.matrix(r)
   } else {
     r=cor(sc_data,ref_data,method='spearman')
   }
@@ -171,7 +178,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
                     clusters = NULL, genes = "de", quantile.use = 0.8, 
                     p.threshold = 0.05, fine.tune = TRUE, 
                     fine.tune.thres = 0.05,sd.thres=1, do.pvals = T, 
-                    numCores = SingleR.numCores) {
+                    numCores = SingleR.numCores, ...) {
   rownames(ref_data) = tolower(rownames(ref_data))
   rownames(sc_data) = tolower(rownames(sc_data))
   A = intersect(rownames(ref_data),rownames(sc_data))
@@ -234,7 +241,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
     print ("Error: method must be 'single' or 'cluster'")
     return(0)
   }
-  output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use)
+  output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use, ...)
   if (do.pvals == T) {
     output$pval = SingleR.ConfidenceTest(output$scores)
   }
