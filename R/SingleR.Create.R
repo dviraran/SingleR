@@ -698,11 +698,14 @@ remove.Unnecessary.Data.single = function(singler.data) {
   singler.data
 }
 
+#' Analyze very big data sets. Runs SingleR on small chunks (10,000 cells per run) and then combines them together.
+#' 
 #' @param counts a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.
 #' @param annot a tab delimited text file or a data.frame. Rownames correspond to column names in the counts data
 #' @param project.name the project name
 #' @param xy a matrix with the xy coordinates. From the original single-cell object.
 #' @param clusters the clusters identities.From the original single-cell object.
+#' @param N number of cells in each iteration. Default is 10000.
 #' @param min.genes Include cells where at least this many genes are detected (number non-zero genes).
 #' @param technology The technology used for creating the single-cell data.
 #' @param species The species of the sample ('Human' or 'Mouse').
@@ -716,7 +719,7 @@ remove.Unnecessary.Data.single = function(singler.data) {
 #' @param do.main.types run the SingleR pipeline for main cell types (cell types grouped together) as well.
 #' @param temp.dir used by the SingleR webtool.
 #' @param numCores Number of cores to use.
-CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,
+CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,N=10000,
                                      min.genes=200,technology='10X',
                                      species='Human',citation='',
                                      ref.list=list(),normalize.gene.length=F,
@@ -726,11 +729,11 @@ CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,
                                      temp.dir=getwd(), numCores = SingleR.numCores) {
   
   n = ncol(counts)
-  s = seq(1,n,by=10000)
+  s = seq(1,n,by=N)
   dir.create(paste0(temp.dir,'/singler.temp/'), showWarnings = FALSE)
   for (i in s) {
     print(i)
-    A = seq(i,min(i+10000-1,n))
+    A = seq(i,min(i+N-1,n))
     singler = CreateSinglerObject(counts[,A], annot = annot[A], project.name=project.name, 
                                   min.genes = min.genes,  technology = technology, 
                                   species = species, citation = citation,
