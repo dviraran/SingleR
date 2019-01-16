@@ -49,7 +49,7 @@ singler.objects.file <- list.files('~/GSE108097/SingleR/',
 singler.objects = lapply(singler.objects.file,FUN=function(x) load(x))
 
 singler = SingleR.Combine(singler.objects,order = mca@cell.names,
-                          clusters=mca@ident,xt=mca@dr$tsne@cell.embeddings)
+                          clusters=mca@ident,xy=mca@dr$tsne@cell.embeddings)
 ```
 
 This SingleR object is fully functional, but quite big for analysis. We created a small data frame only with the annotations and the tSNE coordinates: 
