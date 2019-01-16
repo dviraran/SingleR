@@ -26,4 +26,3 @@ Imports: RColorBrewer,
     doFuture,
     data.table,
     foreach
-    

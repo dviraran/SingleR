@@ -179,7 +179,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
                     clusters = NULL, genes = "de", quantile.use = 0.8, 
                     p.threshold = 0.05, fine.tune = TRUE, 
                     fine.tune.thres = 0.05,sd.thres=1, do.pvals = T, 
-                    numCores = SingleR.numCores) {
+                    numCores = SingleR.numCores, ...) {
   rownames(ref_data) = tolower(rownames(ref_data))
   rownames(sc_data) = tolower(rownames(sc_data))
   A = intersect(rownames(ref_data),rownames(sc_data))
@@ -242,7 +242,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
     print ("Error: method must be 'single' or 'cluster'")
     return(0)
   }
-  output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use)
+  output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use, ...)
   if (do.pvals == T) {
     output$pval = SingleR.ConfidenceTest(output$scores)
   }
