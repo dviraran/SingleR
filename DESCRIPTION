@@ -22,4 +22,7 @@ Imports: RColorBrewer,
     GSVA,
     pheatmap,
     parallel,
-    devtools
+    devtools,
+    doFuture,
+    data.table,
+    foreach

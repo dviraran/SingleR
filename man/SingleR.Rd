@@ -9,7 +9,7 @@
 SingleR(method = "single", sc_data, ref_data, types, clusters = NULL,
   genes = "de", quantile.use = 0.8, p.threshold = 0.05,
   fine.tune = TRUE, fine.tune.thres = 0.05, sd.thres = 1,
-  do.pvals = T, numCores = SingleR.numCores)
+  do.pvals = T, numCores = SingleR.numCores, ...)
 }
 \arguments{
 \item{method}{annotating each single-cell or as a group by cluster: (\code{"single"} or \code{"cluster"})}

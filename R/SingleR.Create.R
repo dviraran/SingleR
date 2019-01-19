@@ -69,9 +69,8 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                            sd.thres = ref$sd.thres,genes = variable.genes,
                            fine.tune = fine.tune,numCores = numCores)
   
-  SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
-  
   if (is.null(clusters)) {
+    SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
     clusters = SingleR.single$clusters$cl
   }
   
@@ -174,7 +173,11 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                             dispersion.function = LogVMR, 
                             x.low.cutoff = 0.0125, x.high.cutoff = 3, 
                             y.cutoff = 0.5, do.contour = F, do.plot = F)
+    if (!is.null(regress.out)) {
     sc <- ScaleData(object = sc, vars.to.regress = regress.out)
+    } else {
+      sc <- ScaleData(object = sc)
+    }
     sc <- RunPCA(object = sc, pc.genes = sc@var.genes, do.print = FALSE)
     #PCElbowPlot(object = sc)
     sc <- FindClusters(object = sc, reduction.type = "pca", 
@@ -184,7 +187,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
     if (ncol(sc@data)<100) {
       sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T,perplexity=10  )
     } else {
-      sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T)
+      sc <- RunTSNE(sc, dims.use = 1:npca, do.fast = T,check_duplicates = FALSE)
       
     }
   }
@@ -261,6 +264,9 @@ ReadSingleCellData = function(counts,annot) {
     names(orig.ident)=colnames(counts)
   }
   
+  colnames(counts) = make.unique(colnames(counts))
+  names(orig.ident) = colnames(counts)
+  
   list(counts=counts,orig.ident=orig.ident)
 }
 
@@ -313,6 +319,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
     clusters = seurat@ident
     
   }
+
   orig.ident = sc.data$orig.ident[colnames(data)]
   counts = sc.data$counts[,colnames(data)]
   
@@ -691,7 +698,28 @@ remove.Unnecessary.Data.single = function(singler.data) {
   singler.data
 }
 
-CreateBigSingleRObject = function(seurat.object,counts,annot=NULL,project.name,
+#' Analyze very big data sets. Runs SingleR on small chunks (10,000 cells per run) and then combines them together.
+#' 
+#' @param counts a tab delimited text file containing the counts matrix, a 10X directory name or a matrix with the counts.
+#' @param annot a tab delimited text file or a data.frame. Rownames correspond to column names in the counts data
+#' @param project.name the project name
+#' @param xy a matrix with the xy coordinates. From the original single-cell object.
+#' @param clusters the clusters identities.From the original single-cell object.
+#' @param N number of cells in each iteration. Default is 10000.
+#' @param min.genes Include cells where at least this many genes are detected (number non-zero genes).
+#' @param technology The technology used for creating the single-cell data.
+#' @param species The species of the sample ('Human' or 'Mouse').
+#' @param citation a citation for the project.
+#' @param ref.list a list of reference objects. If NULL uses the predefined reference objects - Mouse: ImmGen and Mouse.RNAseq, Human: HPCA and Blueprint+Encode. 
+#' @param normalize.gene.length if a full-length method set to TRUE, if a 3' method set to FALSE.
+#' @param variable.genes variable gene method to use - 'sd' or 'de'. Default is 'de'.
+#' @param fine.tune perform fine tuning. Default is TRUE. Fine-tuning may take long to run.
+#' @param do.signatures create signatures data
+#' @param clusters input cluster id for each of the cells with at least min.genes, if NULL uses SingleR clusterings.
+#' @param do.main.types run the SingleR pipeline for main cell types (cell types grouped together) as well.
+#' @param temp.dir used by the SingleR webtool.
+#' @param numCores Number of cores to use.
+CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,N=10000,
                                      min.genes=200,technology='10X',
                                      species='Human',citation='',
                                      ref.list=list(),normalize.gene.length=F,
@@ -701,11 +729,11 @@ CreateBigSingleRObject = function(seurat.object,counts,annot=NULL,project.name,
                                      temp.dir=getwd(), numCores = SingleR.numCores) {
   
   n = ncol(counts)
-  s = seq(1,n,by=10000)
+  s = seq(1,n,by=N)
   dir.create(paste0(temp.dir,'/singler.temp/'), showWarnings = FALSE)
   for (i in s) {
     print(i)
-    A = seq(i,min(i+10000-1,n))
+    A = seq(i,min(i+N-1,n))
     singler = CreateSinglerObject(counts[,A], annot = annot[A], project.name=project.name, 
                                   min.genes = min.genes,  technology = technology, 
                                   species = species, citation = citation,
@@ -724,7 +752,7 @@ CreateBigSingleRObject = function(seurat.object,counts,annot=NULL,project.name,
   }
 
   singler = SingleR.Combine(singler.objects,order = colnames(counts), 
-                            clusters=seurat.object@ident,xy=seurat.object@dr$tsne@cell.embeddings)
+                            clusters=clusters,xy=xy)
   
   singler
 }

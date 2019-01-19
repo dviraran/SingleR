@@ -155,6 +155,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,step=100
   return(output)
 }
 
+
 #' The main SingleR function
 #'
 #' Given single-cell RNAseq data and reference dataset the function returns the best annotation for each single-cell.
