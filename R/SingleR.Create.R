@@ -737,7 +737,8 @@ CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,N=1
     singler = CreateSinglerObject(counts[,A], annot = annot[A], project.name=project.name, 
                                   min.genes = min.genes,  technology = technology, 
                                   species = species, citation = citation,
-                                  do.signatures = do.signatures, clusters = NULL)
+                                  do.signatures = do.signatures, clusters = NULL,
+                                  numCores = numCores)
     
     save(singler,file=paste0(temp.dir,'/singler.temp/',project.name,'.',i,'.RData'))
   }
