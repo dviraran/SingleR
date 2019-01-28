@@ -76,7 +76,7 @@ In this case we already have a single-cell object with tSNE coordinates and clus
 To create the SingleR object simply run the following function:
 
 ```{r eval=FALSE,echo=TRUE}
-singler = CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 500,
+singler = CreateSinglerObject(counts, annot = NULL, project.name, min.genes = 0,
   technology = "10X", species = "Human", citation = "",
   ref.list = list(), normalize.gene.length = F, variable.genes = "de",
   fine.tune = T, do.signatures = T, clusters = NULL, do.main.types = T, 

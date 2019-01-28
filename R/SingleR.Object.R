@@ -53,16 +53,17 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
   }
   rownames(labels) = cell.names
   
-  labels1 = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single$labels1))
-  if (!is.null(singler$singler[[1]]$SingleR.single.main)) {
-    labels1.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single.main$labels1))
-    labels1 = cbind(labels1,labels1.main)
-    colnames(labels1) = c(ref.names,paste0(ref.names,'.main'))
-  } else {
-    colnames(labels1) = c(ref.names)
+  if (!is.null(singler$singler[[1]]$SingleR.single$labels1)) {
+    labels1 = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single$labels1))
+    if (!is.null(singler$singler[[1]]$SingleR.single.main)) {
+      labels1.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single.main$labels1))
+      labels1 = cbind(labels1,labels1.main)
+      colnames(labels1) = c(ref.names,paste0(ref.names,'.main'))
+    } else {
+      colnames(labels1) = c(ref.names)
+    }
+    rownames(labels1) = cell.names
   }
-  rownames(labels1) = cell.names
-  
   
   labels.clusters = data.frame()
   labels.clusters1 = data.frame()
@@ -81,17 +82,20 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
         rownames(labels.clusters) = levels(singler$meta.data$clusters)
       }
       
-      if (!is.null(singler$singler[[1]]$SingleR.clusters)) {
-        labels.clusters1 = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters$labels1))
-        if (!is.null(singler$singler[[1]]$SingleR.clusters.main)) {
-          labels.clusters.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters.main$labels1))
-          labels.clusters1 = cbind(labels.clusters1,labels.clusters.main)
-          colnames(labels.clusters1) = c(ref.names,paste0(ref.names,'.main'))
-        } else {
-          colnames(labels.clusters1) = c(ref.names)
-        }
-        rownames(labels.clusters1) = levels(singler$meta.data$clusters)
+      if (!is.null(singler$singler[[1]]$SingleR.cluster$labels1)) {
         
+        if (!is.null(singler$singler[[1]]$SingleR.clusters)) {
+          labels.clusters1 = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters$labels1))
+          if (!is.null(singler$singler[[1]]$SingleR.clusters.main)) {
+            labels.clusters.main = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.clusters.main$labels1))
+            labels.clusters1 = cbind(labels.clusters1,labels.clusters.main)
+            colnames(labels.clusters1) = c(ref.names,paste0(ref.names,'.main'))
+          } else {
+            colnames(labels.clusters1) = c(ref.names)
+          }
+          rownames(labels.clusters1) = levels(singler$meta.data$clusters)
+          
+        }
       }
     }
   }

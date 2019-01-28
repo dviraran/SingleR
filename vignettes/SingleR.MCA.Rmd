@@ -1,7 +1,7 @@
 ---
 title: "Analyzing big single-cell data"
 author: "Dvir Aran"
-date: "7/19/2018"
+date: "1/18/2019"
 output: html_document
 bibliography: Citations.bib
 ---
@@ -13,6 +13,21 @@ library(ggplot2)
 library(plotly)
 library(ggrastr)
 path.data = '~/Documents/SingleR/package/SingleR/manuscript_figures/FiguresData/'
+```
+
+#### UPDATE
+
+SingleR now contains a function that performs the code in this tutorial.
+
+```{r eval=FALSE}
+CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,N=10000,
+                                     min.genes=200,technology='10X',
+                                     species='Human',citation='',
+                                     ref.list=list(),normalize.gene.length=F,
+                                     variable.genes='de',fine.tune=T,
+                                     reduce.file.size=T,do.signatures=F,
+                                     do.main.types=T,
+                                     temp.dir=getwd(), numCores = SingleR.numCores) {
 ```
 
 ## Analyzing a big data file with SingleR
