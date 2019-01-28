@@ -131,7 +131,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,step=100
       }
       res
     }
-    r = data.table::rbindlist(tmpr, use.names = T)
+    r = data.table::rbindlist(tmpr, use.names = F)
     r = as.matrix(r)
   } else {
     r=cor(sc_data,ref_data,method='spearman')
