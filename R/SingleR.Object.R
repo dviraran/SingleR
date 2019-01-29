@@ -53,6 +53,7 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
   }
   rownames(labels) = cell.names
   
+  labels1 = data.frame()
   if (!is.null(singler$singler[[1]]$SingleR.single$labels1)) {
     labels1 = as.data.frame(sapply(singler$singler,FUN=function(x) x$SingleR.single$labels1))
     if (!is.null(singler$singler[[1]]$SingleR.single.main)) {
