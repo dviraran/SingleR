@@ -135,7 +135,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                             min.features = min.genes, project = project.name)
     mito.features <- grep(pattern = mtgenes, x = rownames(x = sc), value = TRUE,ignore.case=TRUE)
     percent.mito <- Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts')[mito.features, ]) / Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts'))
- 
+    
   } else {
     sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
                             min.genes = min.genes, project = project.name)
@@ -157,7 +157,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                                mean.cutoff = c(0.0125, 3), 
                                dispersion.cutoff = c(0.5, Inf) ,
                                do.contour = F, do.plot = F)
-
+    
     sc <- ScaleData(object = sc,use.umi=T)
     sc <- RunPCA(object = sc, features = VariableFeatures(object = sc),verbose = FALSE)
     sc <- FindNeighbors(object = sc, dims = 1:npca)
@@ -174,7 +174,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                             x.low.cutoff = 0.0125, x.high.cutoff = 3, 
                             y.cutoff = 0.5, do.contour = F, do.plot = F)
     if (!is.null(regress.out)) {
-    sc <- ScaleData(object = sc, vars.to.regress = regress.out)
+      sc <- ScaleData(object = sc, vars.to.regress = regress.out)
     } else {
       sc <- ScaleData(object = sc)
     }
@@ -191,7 +191,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
       
     }
   }
-    
+  
   sc
 }
 
@@ -319,7 +319,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
     clusters = seurat@ident
     
   }
-
+  
   orig.ident = sc.data$orig.ident[colnames(data)]
   counts = sc.data$counts[,colnames(data)]
   
@@ -572,15 +572,20 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
       
       singler$singler[[j]]$SingleR.single$labels =
         rbind(singler$singler[[j]]$SingleR.single$labels,singler.list[[i]]$singler[[j]]$SingleR.single$labels)
-      singler$singler[[j]]$SingleR.single$labels1 =  
-        rbind(singler$singler[[j]]$SingleR.single$labels1,singler.list[[i]]$singler[[j]]$SingleR.single$labels1)
+      if (!is.null(singler$singler[[j]]$SingleR.single$labels1)) {
+        singler$singler[[j]]$SingleR.single$labels1 =  
+          rbind(singler$singler[[j]]$SingleR.single$labels1,singler.list[[i]]$singler[[j]]$SingleR.single$labels1)
+      }
       singler$singler[[j]]$SingleR.single$scores =  
         rbind(singler$singler[[j]]$SingleR.single$scores,singler.list[[i]]$singler[[j]]$SingleR.single$scores)
       
       singler$singler[[j]]$SingleR.single.main$labels =  
         rbind(singler$singler[[j]]$SingleR.single.main$labels,singler.list[[i]]$singler[[j]]$SingleR.single.main$labels)
-      singler$singler[[j]]$SingleR.single.main$labels1 =  
-        rbind(singler$singler[[j]]$SingleR.single.main$labels1,singler.list[[i]]$singler[[j]]$SingleR.single.main$labels1)
+      if (!is.null(singler$singler[[j]]$SingleR.single.main$labels1)) {
+        
+        singler$singler[[j]]$SingleR.single.main$labels1 =  
+          rbind(singler$singler[[j]]$SingleR.single.main$labels1,singler.list[[i]]$singler[[j]]$SingleR.single.main$labels1)
+      }
       singler$singler[[j]]$SingleR.single.main$scores =  
         rbind(singler$singler[[j]]$SingleR.single.main$scores,singler.list[[i]]$singler[[j]]$SingleR.single.main$scores)
       
@@ -600,8 +605,10 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
     if (!is.null(order)) {
       singler$singler[[j]]$SingleR.single$labels = 
         singler$singler[[j]]$SingleR.single$labels[order,]
-      singler$singler[[j]]$SingleR.single$labels1 = 
-        singler$singler[[j]]$SingleR.single$labels1[order,]
+      if (!is.null(singler$singler[[j]]$SingleR.single$labels1)) {
+        singler$singler[[j]]$SingleR.single$labels1 = 
+          singler$singler[[j]]$SingleR.single$labels1[order,]
+      }
       singler$singler[[j]]$SingleR.single$scores = 
         singler$singler[[j]]$SingleR.single$scores[order,]
       singler$singler[[j]]$SingleR.single$cell.names = 
@@ -609,8 +616,10 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
       
       singler$singler[[j]]$SingleR.single.main$labels = 
         singler$singler[[j]]$SingleR.single.main$labels[order,]
-      singler$singler[[j]]$SingleR.single.main$labels1 = 
-        singler$singler[[j]]$SingleR.single.main$labels1[order,]
+      if (!is.null(singler$singler[[j]]$SingleR.single.main$labels1)) {
+        singler$singler[[j]]$SingleR.single.main$labels1 = 
+          singler$singler[[j]]$SingleR.single.main$labels1[order,]
+      }
       singler$singler[[j]]$SingleR.single.main$scores = 
         singler$singler[[j]]$SingleR.single.main$scores[order,]
       singler$singler[[j]]$SingleR.single.main$cell.names = 
@@ -720,13 +729,13 @@ remove.Unnecessary.Data.single = function(singler.data) {
 #' @param temp.dir used by the SingleR webtool.
 #' @param numCores Number of cores to use.
 CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,N=10000,
-                                     min.genes=200,technology='10X',
-                                     species='Human',citation='',
-                                     ref.list=list(),normalize.gene.length=F,
-                                     variable.genes='de',fine.tune=T,
-                                     reduce.file.size=T,do.signatures=F,
-                                     do.main.types=T,
-                                     temp.dir=getwd(), numCores = SingleR.numCores) {
+                                  min.genes=200,technology='10X',
+                                  species='Human',citation='',
+                                  ref.list=list(),normalize.gene.length=F,
+                                  variable.genes='de',fine.tune=T,
+                                  reduce.file.size=T,do.signatures=F,
+                                  do.main.types=T,
+                                  temp.dir=getwd(), numCores = SingleR.numCores) {
   
   n = ncol(counts)
   s = seq(1,n,by=N)
@@ -751,10 +760,9 @@ CreateBigSingleRObject = function(counts,annot=NULL,project.name,xy,clusters,N=1
     load(singler.objects.file[[i]])
     singler.objects[[i]] = singler
   }
-
+  
   singler = SingleR.Combine(singler.objects,order = colnames(counts), 
                             clusters=clusters,xy=xy)
   
   singler
 }
-  
