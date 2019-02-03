@@ -159,7 +159,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                                do.contour = F, do.plot = F)
     
     sc <- ScaleData(object = sc,use.umi=T)
-    sc <- RunPCA(object = sc, features = VariableFeatures(object = sc),verbose = FALSE)
+    sc <- RunPCA(object = sc, npcs = npca, features = VariableFeatures(object = sc),verbose = FALSE)
     sc <- FindNeighbors(object = sc, dims = 1:npca)
     sc <- FindClusters(object = sc,resolution = resolution)
     if (ncol(sc@assays$RNA@data)<100) {
@@ -178,7 +178,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
     } else {
       sc <- ScaleData(object = sc)
     }
-    sc <- RunPCA(object = sc, pc.genes = sc@var.genes, do.print = FALSE)
+    sc <- RunPCA(object = sc, pcs.compute = npca, pc.genes = sc@var.genes, do.print = FALSE)
     #PCElbowPlot(object = sc)
     sc <- FindClusters(object = sc, reduction.type = "pca", 
                        dims.use = 1:npca,resolution = resolution, 
