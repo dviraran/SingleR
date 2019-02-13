@@ -42,9 +42,9 @@ CreateVariableGeneSet = function(ref_data,types,n) {
 #' @param do.main.types if TRUE runs a main cell type annotation using the main_types annotation.
 #' @param numCores Number of cores to use.
 #'
-#' @return a SingleR object object
+#' @return a SingleR objects
 SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
-                                 citation='-',technology='-',variable.genes='sd',
+                                 citation='-',technology='-',variable.genes='de',
                                  fine.tune=T,do.main.types=T,
                                  numCores = SingleR.numCores) {
   types = ref$types
@@ -69,8 +69,8 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                            sd.thres = ref$sd.thres,genes = variable.genes,
                            fine.tune = fine.tune,numCores = numCores)
   
+  SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
   if (is.null(clusters)) {
-    SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
     clusters = SingleR.single$clusters$cl
   }
   
@@ -98,6 +98,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                                           numCores = numCores)
     singler$SingleR.single.main$clusters = 
       SingleR.Cluster(singler$SingleR.single.main,10)
+    
     singler$SingleR.clusters.main = 
       SingleR("cluster",sc.data,ref$data,types=types, 
               clusters=factor(clusters),sd.thres = ref$sd.thres, 

@@ -68,6 +68,7 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
   
   labels.clusters = data.frame()
   labels.clusters1 = data.frame()
+  clusters = data.frame()
   
   if (use.singler.cluster.annot==T) {
     if (length(levels(singler$meta.data$clusters))>1) {
@@ -80,6 +81,7 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
         } else {
           colnames(labels.clusters) = c(ref.names)
         }
+        print(labels.clusters)
         rownames(labels.clusters) = levels(singler$meta.data$clusters)
       }
       
@@ -99,7 +101,10 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
         }
       }
     }
-  }
+    
+    clusters = data.frame(clusters=singler$meta.data$clusters)
+    rownames(clusters) = cell.names
+  } 
   scores = lapply(singler$singler,FUN=function(x) x$SingleR.single$scores)
   if (!is.null(singler$singler[[1]]$SingleR.single.main)) {
     scores.main = lapply(singler$singler,FUN=function(x) x$SingleR.single.main$scores)
@@ -109,11 +114,13 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
     names(scores) = c(ref.names)
   }
   
-  clusters = data.frame(clusters=singler$meta.data$clusters)
-  rownames(clusters) = cell.names
   ident = data.frame(orig.ident = singler$meta.data$orig.ident)
   rownames(ident) = cell.names
   
+  expr = NULL
+  if (!is.null(singler$seurat)) {
+    expr = singler$seurat@data
+  } 
   singler.small = new('SingleR',project.name=singler$meta.data$project.name,
                       xy=singler$meta.data$xy,
                       labels = labels,
@@ -124,7 +131,7 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
                       clusters = clusters,
                       ident = ident,
                       other = data.frame(singler$signatures),
-                      expr = singler$seurat@data,
+                      expr = expr,
                       meta.data = c('Citation' = singler$singler[[1]]$about$Citation, 
                                     'Organism' = singler$singler[[1]]$about$Organism,
                                     'Technology' = singler$singler[[1]]$about$Technology)

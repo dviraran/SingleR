@@ -216,9 +216,10 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
     print(paste0("Number of genes with SD>",sd.thres,": ",
                  length(genes.filtered)))
   } else {
+    genes.filtered=intersect(tolower(genes),intersect(tolower(rownames(sc_data)),
+                                             tolower(rownames(ref_data))))
     print(paste("Number of genes using in analysis:",length(genes.filtered)))
-    genes.filtered=intersect(genes,intersect(rownames(sc_data),
-                                             (rownames(ref_data))))
+    
   }
   
   cell.names = colnames(sc_data)
