@@ -593,8 +593,17 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
       singler$singler[[j]]$SingleR.single$cell.names =  
         c(singler$singler[[j]]$SingleR.single$cell.names,singler.list[[i]]$singler[[j]]$SingleR.single$cell.names)
       singler$singler[[j]]$SingleR.single.main$cell.names =  
-        c(singler$singler[[j]]$SingleR.single$cell.names,singler.list[[i]]$singler[[j]]$SingleR.single.main$cell.names)
+        c(singler$singler[[j]]$SingleR.single.main$cell.names,singler.list[[i]]$singler[[j]]$SingleR.single.main$cell.names)
       
+      if (!is.null(singler$singler[[j]]$SingleR.single.main$pval)) {
+        singler$singler[[j]]$SingleR.single.main$pval =  
+          rbind(singler$singler[[j]]$SingleR.single.main$pval,singler.list[[i]]$singler[[j]]$SingleR.single.main$pval)
+      }
+      
+      if (!is.null(singler$singler[[j]]$SingleR.single$pval)) {
+        singler$singler[[j]]$SingleR.single$pval =  
+          rbind(singler$singler[[j]]$SingleR.single$pval,singler.list[[i]]$singler[[j]]$SingleR.single$pval)
+      }
     }
     singler$meta.data$project.name = paste(singler$meta.data$project.name,singler.list[[i]]$meta.data$project.name,sep='+')
     singler$meta.data$orig.ident = c(singler$meta.data$orig.ident,singler.list[[i]]$meta.data$orig.ident)
