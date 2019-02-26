@@ -5,7 +5,7 @@
 \title{Wrapper function to create a SingleR object}
 \usage{
 SingleR.CreateObject(sc.data, ref, clusters = NULL, species = "Human",
-  citation = "-", technology = "-", variable.genes = "sd",
+  citation = "-", technology = "-", variable.genes = "de",
   fine.tune = T, do.main.types = T, numCores = SingleR.numCores)
 }
 \arguments{
@@ -37,7 +37,7 @@ de.genes.main - lists of lists of differentially expressed genes. Can be created
 \item{numCores}{Number of cores to use.}
 }
 \value{
-a SingleR object object
+a SingleR objects
 }
 \description{
 Wrapper function to create a SingleR object

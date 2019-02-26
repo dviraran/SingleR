@@ -458,7 +458,7 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,
   singler$singler = res
   
   if (do.signatures==TRUE) {
-    signatures = calculateSignatures(sc.data.gl,species=species,numCores=numCores)
+    signatures = calculateSingScores(sc.data.gl,species=species,numCores=numCores)
     singler$signatures = signatures
     
   }

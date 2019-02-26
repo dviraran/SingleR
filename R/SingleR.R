@@ -111,16 +111,19 @@ fineTuningRound = function(topLabels,types,ref_data,genes,mat,sd.thres,
 #' @param genes the list of genes to use.
 #' @param types a list of cell type names corresponding to ref_data. Number of elements in types must be equal to number of columns in ref_data
 #' @param quantile.use correlation coefficients are aggregated for multiple cell types in the reference data set. This parameter allows to choose how to sort the cell types scores, by median (0.5) or any other number between 0 and 1. The default is 0.9.
+#' @param numCores Number of cores to use.
 #' @param step number of cells in each correlation analysis. The correlation analysis memory requirements may be too high, thus it can be split to smaller sets.
 #'
 #' @return a list with the scores, the raw correlation coefficients and the top labels
-SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,step=10000) {
+SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,numCores=1,step=10000) {
   sc_data = as.matrix(sc_data[genes,])
   ref_data = as.matrix(ref_data[genes,])
   
   if (ncol(sc_data)>step) {
     n = ncol(sc_data)
     s = seq(step+1,n,by=step)
+    cl <- makeCluster(numCores)
+    registerDoParallel(cl)
     tmpr = foreach (i = 0:length(s)) %dopar% {
       if(i == 0){
         res = data.table::data.table(cor(sc_data[,1:step],ref_data,method='spearman'))
@@ -133,6 +136,8 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,step=100
     }
     r = data.table::rbindlist(tmpr, use.names = F)
     r = as.matrix(r)
+    on.exit(stopCluster(cl))
+    
   } else {
     r=cor(sc_data,ref_data,method='spearman')
   }
@@ -243,7 +248,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
     print ("Error: method must be 'single' or 'cluster'")
     return(0)
   }
-  output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use, ...)
+  output = SingleR.ScoreData(sc_data,ref_data,genes.filtered,types,quantile.use,numCores=numCores,...)
   if (do.pvals == T) {
     output$pval = SingleR.ConfidenceTest(output$scores)
   }
@@ -317,6 +322,55 @@ calculateSignatures = function(sc_data,species='Human',signatures=NULL,
              parallel.sz=numCores,parallel.type='FORK')
     scores[,i:last] = a
   }
+  mmin = rowMins(scores)
+  mmax = rowMaxs(scores)
+  scores = scores/(mmax-mmin)
+  rownames(scores) = rownames(a)
+  #rownames(scores) = c('G1/S','G2/M')
+  output = data.frame(t(scores))
+  
+  if (is.null(signatures) && species=="Human") {
+    output$Cell_Cycle = rowMeans(t(scores[c('G1S','G2M'),]))
+    output[,c('G1S','G2M')] = c()
+  } else {
+    colnames(output) = c('G1/S','G2/M','M','M/G1','S')
+  }
+  output
+}
+
+#' Calculate single-sample gene set enrichment (using singscore) for each single cell
+#'
+#' @param sc_data  the single-cell RNA-seq data set as a matrix with genes as rownames. If the data if from a full-length platform, counts must be normalized to gene length (TPM, RPKM, FPKM, etc.).
+#' @param species (\code{"Mouse"} or \code{"Human"})
+#' @param signatures a GeneSetCollection object, or NULL to use default signatures
+#'
+#' @return scores for each signature and single cell
+calculateSingScores = function(sc_data,species='Human',signatures=NULL) {
+  #data('signatures')
+  if(is.null(signatures)) {
+    if (species=="Human") {
+      egc = human.egc
+    } else if (species=="Mouse") {
+      egc = mouse.egc
+    }
+  } else {
+    egc = signatures
+  }
+  
+  sc_data = as.matrix(sc_data)
+  rownames(sc_data) = tolower(rownames(sc_data))
+
+  rankedData <- rankGenes(sc_data)
+  scores = matrix(NA,ncol(rankedData),length(egc))
+  options(warn=-1)
+  for (i in 1:length(egc))
+    scores[,i] <- simpleScore(rankedData, geneIds(egc[[i]]), centerScore = TRUE)$TotalScore
+  options(warn=0)
+  scores = t(scores)
+  rownames(scores) = names(egc)
+  colnames(scores) = colnames(rankedData)
+  scores[is.na(scores)] = 0
+
   mmin = rowMins(scores)
   mmax = rowMaxs(scores)
   scores = scores/(mmax-mmin)

@@ -9,7 +9,8 @@ License: GPL 3.0
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
-Imports: RColorBrewer,
+Imports: BiocManager,
+    RColorBrewer,
     Seurat (>= 2.2),
     outliers,
     matrixStats,
@@ -25,4 +26,5 @@ Imports: RColorBrewer,
     devtools,
     doFuture,
     data.table,
-    foreach
+    foreach,
+    singscore

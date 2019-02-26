@@ -5,7 +5,7 @@
 \title{Scoring single cells using reference data set}
 \usage{
 SingleR.ScoreData(sc_data, ref_data, genes, types, quantile.use,
-  step = 10000)
+  numCores = 1, step = 10000)
 }
 \arguments{
 \item{sc_data}{the single-cell RNA-seq data set as a matrix with genes as rownames. If the data if from a full-length platform, counts must be normalized to gene length (TPM, RPKM, FPKM, etc.).}
@@ -17,6 +17,8 @@ SingleR.ScoreData(sc_data, ref_data, genes, types, quantile.use,
 \item{types}{a list of cell type names corresponding to ref_data. Number of elements in types must be equal to number of columns in ref_data}
 
 \item{quantile.use}{correlation coefficients are aggregated for multiple cell types in the reference data set. This parameter allows to choose how to sort the cell types scores, by median (0.5) or any other number between 0 and 1. The default is 0.9.}
+
+\item{numCores}{Number of cores to use.}
 
 \item{step}{number of cells in each correlation analysis. The correlation analysis memory requirements may be too high, thus it can be split to smaller sets.}
 }
