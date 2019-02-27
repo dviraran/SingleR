@@ -597,12 +597,12 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
       
       if (!is.null(singler$singler[[j]]$SingleR.single.main$pval)) {
         singler$singler[[j]]$SingleR.single.main$pval =  
-          rbind(singler$singler[[j]]$SingleR.single.main$pval,singler.list[[i]]$singler[[j]]$SingleR.single.main$pval)
+          c(singler$singler[[j]]$SingleR.single.main$pval,singler.list[[i]]$singler[[j]]$SingleR.single.main$pval)
       }
       
       if (!is.null(singler$singler[[j]]$SingleR.single$pval)) {
         singler$singler[[j]]$SingleR.single$pval =  
-          rbind(singler$singler[[j]]$SingleR.single$pval,singler.list[[i]]$singler[[j]]$SingleR.single$pval)
+          c(singler$singler[[j]]$SingleR.single$pval,singler.list[[i]]$singler[[j]]$SingleR.single$pval)
       }
     }
     singler$meta.data$project.name = paste(singler$meta.data$project.name,singler.list[[i]]$meta.data$project.name,sep='+')
@@ -634,6 +634,13 @@ SingleR.Combine = function(singler.list,order=NULL,clusters=NULL,expr=NULL,
         singler$singler[[j]]$SingleR.single.main$scores[order,]
       singler$singler[[j]]$SingleR.single.main$cell.names = 
         singler$singler[[j]]$SingleR.single.main$cell.names[order]
+      
+      if (!is.null(singler$singler[[j]]$SingleR.single$pval)) {
+        singler$singler[[j]]$SingleR.single$pval = 
+          singler$singler[[j]]$SingleR.single$pval[order]
+        singler$singler[[j]]$SingleR.single.main$pval = 
+          singler$singler[[j]]$SingleR.single.main$pval[order]
+      }
     }
     
     #  singler$singler[[j]]$SingleR.single$clusters = SingleR.Cluster(singler$singler[[j]]$SingleR.single,10)

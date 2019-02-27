@@ -136,6 +136,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,numCores
     }
     r = data.table::rbindlist(tmpr, use.names = F)
     r = as.matrix(r)
+    rownames(r) = colnames(sc_data)
     on.exit(stopCluster(cl))
     
   } else {
