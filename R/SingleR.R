@@ -123,7 +123,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,numCores
     n = ncol(sc_data)
     s = seq(step+1,n,by=step)
     cl <- makeCluster(numCores)
-    registerDoParallel(cl)
+    doParallel::registerDoParallel(cl)
     tmpr = foreach (i = 0:length(s)) %dopar% {
       if(i == 0){
         res = data.table::data.table(cor(sc_data[,1:step],ref_data,method='spearman'))
