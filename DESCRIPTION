@@ -27,4 +27,6 @@ Imports: BiocManager,
     doFuture,
     data.table,
     foreach,
-    singscore
+    singscore,
+    doParallel
+  
