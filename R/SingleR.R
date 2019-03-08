@@ -375,7 +375,6 @@ calculateSingScores = function(sc_data,species='Human',signatures=NULL) {
   mmin = rowMins(scores)
   mmax = rowMaxs(scores)
   scores = scores/(mmax-mmin)
-  rownames(scores) = rownames(a)
   #rownames(scores) = c('G1/S','G2/M')
   output = data.frame(t(scores))
   
