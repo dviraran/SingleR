@@ -129,6 +129,12 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
 SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                                  min.cells = 2,regress.out = 'nUMI',
                                  npca = 10,resolution=0.8,temp.dir=NULL) {
+  
+  if (!requireNamespace("Seurat", quietly = TRUE)) {
+    stop("Seurat needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  
   mtgenes = '^mt-'
   
   if (packageVersion('Seurat')>3) {
@@ -304,6 +310,11 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
                                      min.cells=2,npca=10,regress.out='nUMI',
                                      do.main.types=T,reduce.seurat.object=T,
                                      temp.dir=NULL, numCores = SingleR.numCores) {
+  if (!requireNamespace("Seurat", quietly = TRUE)) {
+    stop("Seurat needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  
   print(project.name)
   print('Reading single-cell data...')
   sc.data = ReadSingleCellData(counts,annot)
@@ -486,6 +497,10 @@ CreateSinglerObject = function(counts,annot=NULL,project.name,
 #'
 #' @return a list with sc.data - the count matrix, and orig.ident - the directory name of the sample
 Combine.Multiple.10X.Datasets = function(dirs,random.sample=0,min.genes=500) {
+  if (!requireNamespace("Seurat", quietly = TRUE)) {
+    stop("Seurat needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
   print(paste(1,basename(dirs[1])))
   sc.data = as.matrix(Read10X(dirs[1]))
   

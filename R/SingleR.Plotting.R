@@ -296,6 +296,10 @@ SingleR.PlotTsne = function(SingleR, xy, labels=SingleR$labels, score.thres=0,
 #' @return ggplot2 object
 SingleR.PlotFeature = function(SingleR,seurat, plot.feature='MaxScore', 
                                dot.size=1,title=NULL) {
+  if (!requireNamespace("Seurat", quietly = TRUE)) {
+    stop("Seurat needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
   if (packageVersion('Seurat')>3) {
     xy = sc@reductions$tsne@cell.embeddings
   } else {
