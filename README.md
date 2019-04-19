@@ -49,13 +49,13 @@ singler = CreateSinglerSeuratObject(counts.file, annot, project.name,
 save(singler,file=paste0(project.name,'.RData')
 ```
 
-For more details on creating a SingleR object see [SingleR - create object](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR_create.html).
+For more details on creating a SingleR object see [SingleR - create object](http://comphealth.ucsf.edu/SingleR_create.html).
 
-For more details about the SingleR method see [SingleR Supplementary Information 1](http://comphealth.ucsf.edu/sample-apps/SingleR/SupplementaryInformation1.html).
+For more details about the SingleR method see [SingleR Supplementary Information 1](http://comphealth.ucsf.edu/SupplementaryInformation1.html).
 
-For examples of SingleR usage see [SingleR Supplementary Information 2](http://comphealth.ucsf.edu/sample-apps/SingleR/SupplementaryInformation2.html).
+For examples of SingleR usage see [SingleR Supplementary Information 2](http://comphealth.ucsf.edu/SupplementaryInformation2.html).
 
-The fine-tuning process of SingleR may take very long, and in the current setting is not feasible for large datasets. Thus, for datasets with tens of thousands of cells it is recommended to run SingleR on subsets of the full data and then combine them together. See an example of analyzing 242,533 from the [Microwell-Seq Mouse Cell Atlas](http://comphealth.ucsf.edu/sample-apps/SingleR/SingleR.MCA.html).
+The fine-tuning process of SingleR may take very long, and in the current setting is not feasible for large datasets. Thus, for datasets with tens of thousands of cells it is recommended to run SingleR on subsets of the full data and then combine them together. See an example of analyzing 242,533 from the [Microwell-Seq Mouse Cell Atlas](http://comphealth.ucsf.edu/SingleR.MCA.html).
 
 # Contributors
 
