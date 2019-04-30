@@ -69,8 +69,8 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                            sd.thres = ref$sd.thres,genes = variable.genes,
                            fine.tune = fine.tune,numCores = numCores)
   
-  SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
   if (is.null(clusters)) {
+    SingleR.single$clusters = SingleR.Cluster(SingleR.single,10)
     clusters = SingleR.single$clusters$cl
   }
   
@@ -96,9 +96,10 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                                           genes = variable.genes.main,
                                           fine.tune = fine.tune,
                                           numCores = numCores)
+    if (is.null(clusters)) {
     singler$SingleR.single.main$clusters = 
       SingleR.Cluster(singler$SingleR.single.main,10)
-    
+    }
     singler$SingleR.clusters.main = 
       SingleR("cluster",sc.data,ref$data,types=types, 
               clusters=factor(clusters),sd.thres = ref$sd.thres, 
