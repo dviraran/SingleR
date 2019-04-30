@@ -121,7 +121,7 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
 #' @param min.genes Include cells where at least this many genes are detected.
 #' @param min.cells include genes with detected expression in at least this many cells. Will subset the raw.data matrix as well. To reintroduce excluded genes, create a new object with a lower cutoff.
 #' @param regress.out variables to regress out (previously latent.vars in RegressOut). For example, nUMI, or percent.mito.
-#' @param npca a vector of the dimensions to use in construction of the clustering and tSNE plot
+#' @param npca a vector of the dimensions to use in construction of the clustering and tSNE plot (not used in Seurat v3)
 #' @param resolution clustering resolution. See Seurat manual for more details.
 #' @param temp.dir used by FindClusters function.
 #'
@@ -129,52 +129,49 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
 SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
                                  min.cells = 2,regress.out = 'nUMI',
                                  npca = 10,resolution=0.8,temp.dir=NULL) {
-  
-  if (!requireNamespace("Seurat", quietly = TRUE)) {
-    stop("Seurat needed for this function to work. Please install it.",
-         call. = FALSE)
-  }
-  
   mtgenes = '^mt-'
   
-  if (packageVersion('Seurat')>3) {
+  if (packageVersion('Seurat')>=3) {
     sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
                             min.features = min.genes, project = project.name)
-    mito.features <- grep(pattern = mtgenes, x = rownames(x = sc), value = TRUE,ignore.case=TRUE)
-    percent.mito <- Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts')[mito.features, ]) / Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts'))
-    
+    percent.mito <- PercentageFeatureSet(object = sc, pattern = "^(?i)mt-")
+    # mito.features <- grep(pattern = mtgenes, x = rownames(x = sc), value = TRUE,ignore.case=TRUE)
+    #  percent.mito <- Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts')[mito.features, ]) / Matrix::colSums(x = GetAssayData(object = sc, slot = 'counts'))
+    sc <- AddMetaData(object = sc, metadata = percent.mito, 
+                      col.name = "percent.mito")
   } else {
     sc = CreateSeuratObject(sc.data, min.cells = min.cells, 
                             min.genes = min.genes, project = project.name)
     mito.genes <- grep(pattern = mtgenes, x = rownames(x = sc@data), 
                        value = TRUE,ignore.case=TRUE)
     percent.mito <- colSums((sc.data[mito.genes, ]))/colSums(sc.data)
+    sc <- AddMetaData(object = sc, metadata = percent.mito, 
+                      col.name = "percent.mito")
     
+    sc <- NormalizeData(object = sc, 
+                        normalization.method = "LogNormalize", 
+                        scale.factor = 10000)
   }
   
-  sc <- AddMetaData(object = sc, metadata = percent.mito, 
-                    col.name = "percent.mito")
-  
-  sc <- NormalizeData(object = sc, 
-                      normalization.method = "LogNormalize", 
-                      scale.factor = 10000)
-  
-  if (packageVersion('Seurat')>3) {
-    sc <- FindVariableFeatures(object = sc, selection.method = 'mean.var.plot', 
-                               mean.cutoff = c(0.0125, 3), 
-                               dispersion.cutoff = c(0.5, Inf) ,
-                               do.contour = F, do.plot = F)
+  if (packageVersion('Seurat')>=3) {
+    sc <- SCTransform(object = sc, vars.to.regress = "percent.mito", verbose = FALSE,
+                      do.correct.umi=T)
     
-    sc <- ScaleData(object = sc,use.umi=T)
-    sc <- RunPCA(object = sc, npcs = npca, features = VariableFeatures(object = sc),verbose = FALSE)
-    sc <- FindNeighbors(object = sc, dims = 1:npca)
-    sc <- FindClusters(object = sc,resolution = resolution)
+    # sc <- FindVariableFeatures(object = sc, selection.method = 'mean.var.plot', 
+    #                             mean.cutoff = c(0.0125, 3), 
+    #                            dispersion.cutoff = c(0.5, Inf) ,
+    #                           do.contour = F, do.plot = F)
+    
+    #sc <- ScaleData(object = sc,use.umi=T)
+    sc <- RunPCA(object = sc,verbose = FALSE)
+    sc <- FindNeighbors(object = sc, dims = 1:30)
+    sc <- FindClusters(object = sc)
     if (ncol(sc@assays$RNA@data)<100) {
       sc <- RunTSNE(sc,perplexity=10,dims = 1:npca)
     } else {
-      sc <- RunTSNE(sc,dims = 1:npca)
-      
+      sc <- RunTSNE(sc,dims = 1:30)
     }
+    sc <- RunUMAP(sc,dims = 1:30, verbose = FALSE)
   } else {
     sc <- FindVariableGenes(object = sc, mean.function = ExpMean, 
                             dispersion.function = LogVMR, 
@@ -185,7 +182,7 @@ SingleR.CreateSeurat <- function(project.name,sc.data,min.genes = 200,
     } else {
       sc <- ScaleData(object = sc)
     }
-    sc <- RunPCA(object = sc, pcs.compute = npca, pc.genes = sc@var.genes, do.print = FALSE)
+    sc <- RunPCA(object = sc, pc.genes = sc@var.genes, do.print = FALSE)
     #PCElbowPlot(object = sc)
     sc <- FindClusters(object = sc, reduction.type = "pca", 
                        dims.use = 1:npca,resolution = resolution, 
