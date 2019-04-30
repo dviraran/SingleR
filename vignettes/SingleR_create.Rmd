@@ -120,7 +120,7 @@ This is how we define the reference object:
   ref$de.genes.main = CreateVariableGeneSet(expr,main_types,300)
   
   # if using the sd method, we need to define an sd threshold
-  sd = rowsSd(expr)
+  sd = apply(expr,1,sd)
   sd.thres = sort(sd, decreasing = T)[4000] # or any other threshold
   ref$sd.thres = sd.thres
   

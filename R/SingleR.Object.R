@@ -119,7 +119,11 @@ convertSingleR2Browser = function(singler,use.singler.cluster.annot=T) {
   
   expr = NULL
   if (!is.null(singler$seurat)) {
-    expr = singler$seurat@data
+    if (packageVersion('Seurat')>=3) {
+      expr = singler$seurat@assays$RNA@data
+    } else {
+      expr = singler$seurat@data
+    }
   } 
   singler.small = new('SingleR',project.name=singler$meta.data$project.name,
                       xy=singler$meta.data$xy,
