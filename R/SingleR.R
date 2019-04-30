@@ -22,20 +22,20 @@ SingleR.FineTune <- function(sc_data,ref_data,types,scores,quantile.use,
   print(paste("Fine-tuning round on top cell types (using", numCores, 
               "CPU cores):"))
   labels = pbmclapply(1:N,FUN=function(i){
-  max_score = max(scores[i,])
-  topLabels = names(scores[i,scores[i,]>=max_score-fine.tune.thres])
-  if (length(topLabels)==0) {
-    return (names(which.max(scores[i,])))
-  } else {
-    k=1
-    while(length(topLabels)>1) {
-      topLabels = fineTuningRound(topLabels,types,ref_data,genes,
-                                  mean_mat[,topLabels],sd.thres,
-                                  sc_data[,i],quantile.use,fine.tune.thres)
-      k=k+1
+    max_score = max(scores[i,])
+    topLabels = names(scores[i,scores[i,]>=max_score-fine.tune.thres])
+    if (length(topLabels)==0) {
+      return (names(which.max(scores[i,])))
+    } else {
+      k=1
+      while(length(topLabels)>1) {
+        topLabels = fineTuningRound(topLabels,types,ref_data,genes,
+                                    mean_mat[,topLabels],sd.thres,
+                                    sc_data[,i],quantile.use,fine.tune.thres)
+        k=k+1
+      }
+      return (topLabels)
     }
-    return (topLabels)
-  }
   },mc.cores=numCores)
   labels = as.matrix(unlist(labels))
   
@@ -122,22 +122,31 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,numCores
   if (ncol(sc_data)>step) {
     n = ncol(sc_data)
     s = seq(step+1,n,by=step)
-    cl <- makeCluster(numCores)
-    doParallel::registerDoParallel(cl)
-    tmpr = foreach (i = 0:length(s)) %dopar% {
-      if(i == 0){
-        res = data.table::data.table(cor(sc_data[,1:step],ref_data,method='spearman'))
-      } else {
-        A = seq(s[i],min(s[i]+step-1,n))
-        # r=rbind(r,cor(sc_data[,A],ref_data,method='spearman'))
-        res = data.table::data.table(cor(sc_data[,A],ref_data,method='spearman'))
+    if (FALSE) {
+      cl <- makeCluster(numCores)
+      doParallel::registerDoParallel(cl)
+      tmpr = foreach (i = 0:length(s)) %dopar% {
+        if(i == 0){
+          res = data.table::data.table(cor(sc_data[,1:step],ref_data,method='spearman'))
+        } else {
+          A = seq(s[i],min(s[i]+step-1,n))
+          # r=rbind(r,cor(sc_data[,A],ref_data,method='spearman'))
+          res = data.table::data.table(cor(sc_data[,A],ref_data,method='spearman'))
+        }
+        res
       }
-      res
+      r = data.table::rbindlist(tmpr, use.names = F)
+      r = as.matrix(r)
+      rownames(r) = colnames(sc_data)
+      on.exit(stopCluster(cl))
+    } else {
+      s = seq(step+1,n,by=step)
+      r=cor(sc_data[,1:step],ref_data,method='spearman')
+      for (i in 1:length(s)) {
+        A = seq(s[i],min(s[i]+step-1,n))
+        r=cbind(r,cor(sc_data[,A],ref_data,method='spearman'))
+      }
     }
-    r = data.table::rbindlist(tmpr, use.names = F)
-    r = as.matrix(r)
-    rownames(r) = colnames(sc_data)
-    on.exit(stopCluster(cl))
     
   } else {
     r=cor(sc_data,ref_data,method='spearman')
@@ -223,7 +232,7 @@ SingleR <- function(method = "single", sc_data, ref_data, types,
                  length(genes.filtered)))
   } else {
     genes.filtered=intersect(tolower(genes),intersect(tolower(rownames(sc_data)),
-                                             tolower(rownames(ref_data))))
+                                                      tolower(rownames(ref_data))))
     print(paste("Number of genes using in analysis:",length(genes.filtered)))
     
   }
@@ -360,7 +369,7 @@ calculateSingScores = function(sc_data,species='Human',signatures=NULL) {
   
   sc_data = as.matrix(sc_data)
   rownames(sc_data) = tolower(rownames(sc_data))
-
+  
   rankedData <- rankGenes(sc_data)
   scores = matrix(NA,ncol(rankedData),length(egc))
   options(warn=-1)
@@ -371,7 +380,7 @@ calculateSingScores = function(sc_data,species='Human',signatures=NULL) {
   rownames(scores) = names(egc)
   colnames(scores) = colnames(rankedData)
   scores[is.na(scores)] = 0
-
+  
   mmin = rowMins(scores)
   mmax = rowMaxs(scores)
   scores = scores/(mmax-mmin)
@@ -421,14 +430,16 @@ SingleR.Cluster = function(SingleR,num.clusts=10,normalize_rows=F,
 #' @param rerun.seurat if TRUE reruns the Seurat analyses for the subset data.
 #'
 #' @return a subset of the original SingleR vector
-SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
+SingleR.Subset = function(singler,subsetdata,rerun.seurat=F,rerun.singler.clustering=F) {
   s = singler
   
   if (!is.null(s$seurat)) {
-    s$seurat = SubsetData(s$seurat,colnames(s$seurat@data)[subsetdata])
-    if (packageVersion('Seurat')>3) {
-      
+    if (packageVersion('Seurat')>=3) {
+      s$seurat = SubsetData(s$seurat,'RNA',colnames(s$seurat@assays$RNA)[subsetdata])
+      subsetdata = unlist(lapply(colnames(s$seurat@assays$RNA),FUN=function(x) 
+        which(singler$singler[[1]]$SingleR.single$cell.names==x)))
     } else {
+      s$seurat = SubsetData(s$seurat,colnames(s$seurat@data)[subsetdata])
       subsetdata = unlist(lapply(s$seurat@cell.names,FUN=function(x) 
         which(singler$singler[[1]]$SingleR.single$cell.names==x)))
     }
@@ -484,22 +495,50 @@ SingleR.Subset = function(singler,subsetdata,rerun.seurat=F) {
   }
   
   if (rerun.seurat==T) {
-    s$seurat <- FindVariableGenes(object = s$seurat, mean.function = ExpMean,
-                                  dispersion.function = LogVMR,
-                                  x.low.cutoff = 0.0125, x.high.cutoff = 3,
-                                  y.cutoff = 0.5, do.contour = F, do.plot = F)
-    regress.out='nUMI'
-    s$seurat <- ScaleData(object = s$seurat, vars.to.regress = regress.out)
-    s$seurat <- RunPCA(object = s$seurat, pc.genes = s$seurat@var.genes, do.print = FALSE)
-    PCElbowPlot(object = s$seurat)
-    npca=20
-    resolution=0.8
-    s$seurat <- FindClusters(object = s$seurat, reduction.type = "pca",
-                             dims.use = 1:npca,resolution = resolution,
-                             print.output = 0, save.SNN = F)
-    s$seurat <- RunTSNE(s$seurat, dims.use = 1:npca, do.fast = T)
-    s$meta.data$xy=s$seurat@dr$tsne@cell.embeddings
-    s$meta.data$clusters=s$seurat@ident
+    if (packageVersion('Seurat')>=3) {
+      s$seurat <- SCTransform(object = s$seurat, vars.to.regress = "percent.mito", verbose = FALSE,
+                              do.correct.umi=T)
+      s$seurat <- RunPCA(object = s$seurat,verbose = FALSE)
+      s$seurat <- FindNeighbors(object = s$seurat, dims = 1:30)
+      s$seurat <- FindClusters(object = s$seurat)
+      if (ncol(s$seurat@assays$RNA@data)<100) {
+        s$seurat <- RunTSNE(s$seurat,perplexity=10,dims = 1:30)
+      } else {
+        s$seurat <- RunTSNE(s$seurat,dims = 1:30)
+      }
+      s$seurat <- RunUMAP(s$seurat,dims = 1:30, verbose = FALSE)
+      
+      s$meta.data$xy=s$seurat@reductions$umap@cell.embeddings
+      s$meta.data$clusters=s$seurat@active.ident
+    } else {
+      s$seurat <- FindVariableGenes(object = s$seurat, mean.function = ExpMean,
+                                    dispersion.function = LogVMR,
+                                    x.low.cutoff = 0.0125, x.high.cutoff = 3,
+                                    y.cutoff = 0.5, do.contour = F, do.plot = F)
+      regress.out='nUMI'
+      s$seurat <- ScaleData(object = s$seurat, vars.to.regress = regress.out)
+      s$seurat <- RunPCA(object = s$seurat, pc.genes = s$seurat@var.genes, do.print = FALSE)
+      PCElbowPlot(object = s$seurat)
+      npca=10
+      resolution=0.8
+      s$seurat <- FindClusters(object = s$seurat, reduction.type = "pca",
+                               dims.use = 1:npca,resolution = resolution,
+                               print.output = 0, save.SNN = F)
+      s$seurat <- RunTSNE(s$seurat, dims.use = 1:npca, do.fast = T)
+      s$meta.data$xy=s$seurat@dr$tsne@cell.embeddings
+      s$meta.data$clusters=s$seurat@ident
+    }
+    if (rerun.singler.clustering == T) {
+      for (i in 1:length(s$singler)) {
+        ref = get(gsub('-','\\.',tolower(s$singler[[i]]$about$RefData)))
+        s$singler[[i]]$SingleR.clusters = 
+          SingleR(method = "cluster", s$seurat@data, ref$data,ref$types,
+                  clusters = s$meta.data$clusters, genes=ref$de.genes)
+        s$singler[[i]]$SingleR.clusters.main = 
+          SingleR(method = "cluster", s$seurat@data, ref$data,ref$main_types,
+                  clusters = s$meta.data$clusters, genes=ref$de.genes.main)
+      }
+    }
   }
   s
 }
