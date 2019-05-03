@@ -144,7 +144,7 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,numCores
       r=cor(sc_data[,1:step],ref_data,method='spearman')
       for (i in 1:length(s)) {
         A = seq(s[i],min(s[i]+step-1,n))
-        r=cbind(r,cor(sc_data[,A],ref_data,method='spearman'))
+        r = rbind(r,cor(sc_data[,A],ref_data,method='spearman'))
       }
     }
     

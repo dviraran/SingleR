@@ -152,3 +152,18 @@ if (FALSE) {
     saveRDS(singler.small,file=paste0('~/Documents/SingleR/SingleRbrowseR/data/',gsub('RData','rds',files[i])))
   }
 }
+
+SingleR.SubsetS4 = function(singler,subsetdata) {
+  s = singler
+  s@xy = s@xy[subsetdata,]
+  s@labels = s@labels[subsetdata,]
+  s@labels.NFT = s@labels.NFT[subsetdata,]
+  s@clusters = as.data.frame(s@clusters[subsetdata,])
+  s@ident = as.data.frame(s@ident[subsetdata,])
+  s@other = as.data.frame(s@other[subsetdata,])
+  for (k in names(s@scores)) {
+    s@scores[[k]] = s@scores[[k]][subsetdata,]
+  }
+  s@expr = s@expr[,subsetdata]
+  s
+}
