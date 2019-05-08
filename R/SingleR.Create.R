@@ -97,8 +97,8 @@ SingleR.CreateObject <- function(sc.data,ref,clusters=NULL,species='Human',
                                           fine.tune = fine.tune,
                                           numCores = numCores)
     if (is.null(clusters)) {
-    singler$SingleR.single.main$clusters = 
-      SingleR.Cluster(singler$SingleR.single.main,10)
+      singler$SingleR.single.main$clusters = 
+        SingleR.Cluster(singler$SingleR.single.main,10)
     }
     singler$SingleR.clusters.main = 
       SingleR("cluster",sc.data,ref$data,types=types, 
@@ -321,7 +321,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
                                   min.genes,min.cells=min.cells,
                                 regress.out=regress.out,npca=npca,
                                 temp.dir=temp.dir)
-  if (packageVersion('Seurat')>3) {
+  if (packageVersion('Seurat')>=3) {
     data = seurat@assays$RNA@data
     clusters = seurat@active.ident
   } else {
@@ -331,12 +331,12 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
   }
   
   orig.ident = sc.data$orig.ident[colnames(data)]
-  counts = sc.data$counts[,colnames(data)]
+  counts = as.matrix(sc.data$counts[,colnames(data)])
   
   seurat@meta.data$orig.ident = factor(orig.ident)
   
   if(reduce.seurat.object==T) {
-    if (packageVersion('Seurat')>3) {
+    if (packageVersion('Seurat')>=3) {
       seurat@assays$RNA@counts = matrix()
       seurat@assays$RNA@scale.data = matrix()
     } else {
@@ -358,7 +358,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
   
   singler$seurat = seurat 
   
-  if (packageVersion('Seurat')>3) {
+  if (packageVersion('Seurat')>=3) {
     singler$meta.data$xy = seurat@reductions$tsne@cell.embeddings
     singler$meta.data$clusters = seurat@active.ident
     
