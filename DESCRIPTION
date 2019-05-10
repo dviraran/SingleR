@@ -1,7 +1,7 @@
 Package: SingleR
 Type: Package
 Title: Reference-based single-cell RNA-seq annotation
-Version: 0.2.2
+Version: 1.0.0
 Author: Dvir Aran
 Maintainer: Dvir Aran <dvir.aran@ucsf.edu>
 Description: A computational method for unbiased cell type recognition of scRNA-seq. SingleR leverages reference transcriptomic datasets of pure cell types to infer the cell of origin of each of the single cells independently. SingleR’s annotations combined with Seurat, a processing and analysis package designed for scRNA-seq, provide a powerful tool for the investigation of scRNA-seq data
