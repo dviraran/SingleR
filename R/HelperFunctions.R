@@ -88,3 +88,28 @@ clusters.map.values = function(cluster_ids,singler_clusters) {
   names(map) = sort(as.numeric(unique(cluster_ids)))
   clusters = recode(cluster_ids,!!!map)
 }
+
+
+#' Stable correlation analysis. Courtesy of Thomas Wu.
+#'
+#' @param x x
+#' @param y y
+#' @param method method
+#' #'
+#' @return r
+cor.stable <- function (x, y, method="pearson", ...) {
+  omit1 <- which(apply(x, 2, sd) == 0)
+  omit2 <- which(apply(y, 2, sd) == 0)
+  if (length(omit1) > 0 && length(omit2) > 0) {
+    r <- matrix(0, ncol(x), ncol(y))
+    r[-omit1,-omit2] = cor(x[,-omit1], y[,-omit2], method=method, ...)
+  } else if (length(omit1) > 0) {
+    r <- matrix(0, ncol(x), ncol(y))
+    r[-omit1,] = cor(x[,-omit1], y, method=method, ...)
+  } else if (length(omit2) > 0) {
+    r <- matrix(0, ncol(x), ncol(y))
+    r[,-omit2] = cor(x, y[,-omit2], method=method, ...)
+  } else {
+    r = cor(x, y, method=method, ...)
+  }
+}
