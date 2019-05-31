@@ -93,7 +93,7 @@ fineTuningRound = function(topLabels,types,ref_data,genes,mat,sd.thres,
     return (topLabels[1])
   }
   if (sd(sc_data.filtered)>0) {
-    r=cor(sc_data.filtered,ref_data.filtered,method='spearman')
+    r=cor.stable(sc_data.filtered,ref_data.filtered,method='spearman')
     agg_scores = quantileMatrix(r,types.filtered,quantile.use)[1,];
     agg_scores = sort(agg_scores,decreasing = T)
     agg_scores = agg_scores[-length(agg_scores)]
@@ -127,11 +127,11 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,numCores
       doParallel::registerDoParallel(cl)
       tmpr = foreach (i = 0:length(s)) %dopar% {
         if(i == 0){
-          res = data.table::data.table(cor(sc_data[,1:step],ref_data,method='spearman'))
+          res = data.table::data.table(cor.stable(sc_data[,1:step],ref_data,method='spearman'))
         } else {
           A = seq(s[i],min(s[i]+step-1,n))
           # r=rbind(r,cor(sc_data[,A],ref_data,method='spearman'))
-          res = data.table::data.table(cor(sc_data[,A],ref_data,method='spearman'))
+          res = data.table::data.table(cor.stable(sc_data[,A],ref_data,method='spearman'))
         }
         res
       }
@@ -141,15 +141,15 @@ SingleR.ScoreData <- function(sc_data,ref_data,genes,types,quantile.use,numCores
       on.exit(stopCluster(cl))
     } else {
       s = seq(step+1,n,by=step)
-      r=cor(sc_data[,1:step],ref_data,method='spearman')
+      r=cor.stable(sc_data[,1:step],ref_data,method='spearman')
       for (i in 1:length(s)) {
         A = seq(s[i],min(s[i]+step-1,n))
-        r = rbind(r,cor(sc_data[,A],ref_data,method='spearman'))
+        r = rbind(r,cor.stable(sc_data[,A],ref_data,method='spearman'))
       }
     }
     
   } else {
-    r=cor(sc_data,ref_data,method='spearman')
+    r=cor.stable(sc_data,ref_data,method='spearman')
   }
   agg_scores = quantileMatrix(r,types,quantile.use);
   #agg_scores = aggregate(t(r)~types,FUN = quantile, probs  = quantile.use)
