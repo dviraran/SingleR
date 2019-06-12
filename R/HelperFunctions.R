@@ -112,4 +112,6 @@ cor.stable <- function (x, y, method="pearson", ...) {
   } else {
     r = cor(x, y, method=method, ...)
   }
+
+  return(r)
 }
