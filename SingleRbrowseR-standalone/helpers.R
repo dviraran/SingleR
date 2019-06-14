@@ -16,13 +16,20 @@ library(Seurat)
 
 #library(psych)
 #library(gplots)
-#library(RColorBrewer)
+library(RColorBrewer)
 #library(shinysky)
 #library(rCharts)
 #library(gridExtra)
 #library(heatmap3)
 #library(scatterD3)
 #library(magrittr)
+
+
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+colors = c('#fe296c', '#487eb6', '#a7ce31', '#f8cc03', '#ff8c02', '#699696', '#b77844', '#83acd0', 
+           '#c2e076', '#fadc5a', '#ff549f', '#ffaf54', '#9ab8b7', '#d2a683', '#3d699b', '#87ac22', 
+           '#cda908', '#d02158', '#d07300', '#567676')
+
 
 loadRData <- function(fileName){
   load(fileName)
@@ -39,7 +46,6 @@ singlerDrawBoxPlot = function(sc_data,ref,cell_id,n.show = 50) {
   SingleR.DrawBoxPlot(sc_data,cell_id,ref,top.n = n.show)
   
 }
-
 
 singlerDrawBoxPlot2 = function(scores,ref,cell_id,n.show = 50,is.main.types=F) {
   Scores=scores[cell_id,]
