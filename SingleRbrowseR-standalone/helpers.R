@@ -215,7 +215,7 @@ FineTuningStep <- function(singler,expr,ref,types,topLabels,cell_id) {
   return(out)
 }
 
-createScatterPlot = function(obj=obj,input=input,gene.to.use) {
+createScatterPlot = function(obj=obj,input=input,gene.to.use,n.cell.types=40) {
   xy = data.frame(x=obj$singler@xy[,1],y=obj$singler@xy[,2])
   col_continuous = FALSE
   colorSpectrum = c('#4575b4', '#91bfdb', '#e0f3f8', '#ffffbf', '#fee090', '#fc8d59', '#d73027')
@@ -276,11 +276,11 @@ createScatterPlot = function(obj=obj,input=input,gene.to.use) {
     col_continuous = TRUE
   }
   obj$labels = labels
-  if (col_continuous==F & length(unique(labels))>39) {
+  if (col_continuous==F & length(unique(labels))>=n.cell.types) {
     tbl = table(labels)
-    thres = sort(tbl,decreasing = T)[40]
+    thres = sort(tbl,decreasing = T)[n.cell.types]
     labels = as.character(labels)
-    labels[labels %in% names(tbl)[tbl<=thres]] = paste0('zOther (N<=',thres,')')
+    labels[labels %in% names(tbl)[tbl<=thres]] = '*Other cell types'
   }
   annot = data.frame(labels,obj$singler@clusters[,1],obj$singler@ident[,1])
   colnames(annot) = c('labels','cluster','ident')

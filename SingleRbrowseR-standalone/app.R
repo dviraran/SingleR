@@ -352,17 +352,17 @@ server <- function(input, output, session) {
   
   output$scatter_plot1 <- renderCanvasXpress({
     print('scatter_plot1')
-    createScatterPlot(obj,input,input$data6[1])
+    createScatterPlot(obj,input,input$data6[1],input$number.types)
   })
   
   output$scatter_plot2 <- renderCanvasXpress({
     print('scatter_plot2')
-    createScatterPlot(obj,input,input$data6[2])
+    createScatterPlot(obj,input,input$data6[2],input$number.types)
   })
   
   output$scatter_plot <- renderCanvasXpress({
     print('scatter_plot')
-    createScatterPlot(obj,input,NULL)
+    createScatterPlot(obj,input,NULL,input$number.types)
   })
   
   output$selectedLabels <- renderUI({
@@ -659,7 +659,7 @@ server <- function(input, output, session) {
       C =  obj$singler@clusters[,input$de_set2_group2] %in% input$de_set2_labels3
     
     obj$de.set2 = A&B&C
-    sprintf('Set 1 number of cells: %d', sum(A&B&C))
+    sprintf('Set 2 number of cells: %d', sum(A&B&C))
   })
   
   v <- reactiveValues(doPlot = FALSE)
