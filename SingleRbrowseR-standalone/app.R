@@ -42,6 +42,7 @@ ui <- fluidPage(
                    selectInput('ref_data','Refererence set:',NULL),
                    sliderInput("dot.size", "Point size:", min=1, max=25, value=3),
                    radioButtons('data2','Color by:',analysis_sets, selected = 'SingleR annotations'),
+                   sliderInput("number.types", "Number of cell types to present:", min=1, max=40, value=40),
                    checkboxInput('by_clusters','Aggregate by clusters'),
                    
                    conditionalPanel(condition = "input.by_clusters == true",
