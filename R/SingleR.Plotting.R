@@ -300,8 +300,8 @@ SingleR.PlotFeature = function(SingleR,seurat, plot.feature='MaxScore',
     stop("Seurat needed for this function to work. Please install it.",
          call. = FALSE)
   }
-  if (packageVersion('Seurat')>3) {
-    xy = sc@reductions$tsne@cell.embeddings
+  if (packageVersion('Seurat')>=3) {
+    xy = seurat@reductions$tsne@cell.embeddings
   } else {
     xy = seurat@dr$tsne@cell.embeddings
   }
