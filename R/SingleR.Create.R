@@ -346,7 +346,7 @@ CreateSinglerSeuratObject = function(counts,annot=NULL,project.name,
     }
   }
   
-  print('Creat SingleR object...')
+  print('Create SingleR object...')
   
   singler = CreateSinglerObject(counts,orig.ident,project.name,
                                 min.genes=min.genes,technology,species,
