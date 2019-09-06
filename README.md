@@ -1,4 +1,10 @@
-**8.1.2019** Update: Aaron Lun has joined our team and created a simplified and better performing version of SingleR. It can be found [here](https://github.com/LTLA/SingleR). We are planning deploy that version in to Bioconductor once we work out all the kinks, but you are welcome to try it out. 
+# SingleR is now on Bioconductor
+
+**Update: September 2019** 
+
+A new and improved version of SingleR is now on Bioconductor - https://bioconductor.org/packages/devel/bioc/html/SingleR.html. The version of SingleR in this repository will not be maintained further.
+
+# Legacy version of SingleR
 
 # SingleR - Single-cell Recognition
 
