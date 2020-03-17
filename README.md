@@ -2,7 +2,7 @@
 
 **Update: September 2019** 
 
-A new and improved version of SingleR is now on Bioconductor - https://bioconductor.org/packages/devel/bioc/html/SingleR.html. The version of SingleR in this repository will not be maintained further.
+A new and improved version of SingleR is on Bioconductor - https://bioconductor.org/packages/release/bioc/html/SingleR.html. The version of SingleR in this repository will not be maintained further.
 
 # Legacy version of SingleR
 
