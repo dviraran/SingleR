@@ -30,9 +30,9 @@ singler.new = convertSingleR2Browser(singler)
 saveRDS(singler.new,file=paste0(singler.new@project.name,'.rds')
 ```
 
-The new SingleR S4 object simlifies the access SingleR annotations and allows multipe identity columns (orig.ident) and clustering columns. See ?'SingleR-class' for more details.
+The new SingleR S4 object simplifies the access SingleR annotations and allows multipe identity columns (orig.ident) and clustering columns. See ?'SingleR-class' for more details.
 
-**11.6.2018**: The Seurat team has roled out Seurat version 3.0 with many changes to the function names and variables. It is important to note that SingleR is independent of Seurat, and only requires xy representation of the single-cells, which can be obtained by any function. However, SingleR provides wrapper functions to streamline the analysis with Seuart which are affected by these changes. SingleR is now updated to run with Seurat 3.0, but it is still in beta mode. 
+**11.6.2018**: The Seurat team has roled out Seurat version 3.0 with many changes to the function names and variables. It is important to note that SingleR is independent of Seurat, and only requires xy representation of the single-cells, which can be obtained by any function. However, SingleR provides wrapper functions to streamline the analysis with Seurat which are affected by these changes. SingleR is now updated to run with Seurat 3.0, but it is still in beta mode. 
 
 Best practice is to create the single-cell object first. Then, create the SingleR object with the same cells used in the single-cell object (after filtering low quality cells). Finally, copy to relevant fields to the SingleR object. The new t-SNE representations are in 
 `sc@reductions$tsne@cell.embeddings`.
